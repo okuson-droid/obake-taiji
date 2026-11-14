@@ -24,6 +24,7 @@ obake-taiji/
   docs/
     rules.md              ルールの写し（正は claude.ai プロジェクト）
     design.md             この設計書の写し
+    decisions.md          決定記録の写し
   src/
     data/                 カード・盤面の静的データ
       board.ts            部屋・辺・スタート地点・開始時の向き
@@ -534,6 +535,7 @@ Realtime は `postgres_changes`（テーブル `rooms`、フィルタ `id=eq.<co
 ## 文書
 - docs/rules.md：ルール（現在 v0.1）。条項番号でテストと対応づける。
 - docs/design.md：実装設計書。構成・API・プロトコル・段階はここに従う。
+- docs/decisions.md：ルールの裁定、設計判断、現在の段階の記録。判断の根拠はここを見る。
 - 設計文書の正は claude.ai プロジェクトにある。docs/ は写しであり、勝手に書き換えない。
 
 ## コマンド
