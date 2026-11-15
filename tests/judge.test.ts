@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'vitest';
 import { applyMove, finalScores, getOptions, isGameOver } from '../src/game/engine.ts';
 import { scoreOf } from '../src/game/queries.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, play, playStill } from './helpers.ts';
 
 describe('獲得（rules v0.1 §6.1・§6.4）', () => {
   test('§6.1 駒と同じ部屋のチップをすべて獲得する', () => {
@@ -50,14 +50,14 @@ describe('判定の順（rules v0.1 §6.2）', () => {
 
   test('§6.2 判定は手番プレイヤーから席番号の順（最後の席の次は席 1）', () => {
     const ids = cardIds();
-    const card = ids.barrier(); // 仮実装（効果なし）のカードで駒を動かさずに判定させる
+    const card = ids.barrier(); // 通せん棒を置くだけで駒を動かさずに判定させる
     const s0 = arrange({
       players: 3,
       turn: 1,
       chips: [{ cell: 'D4' }, { cell: 'A5' }],
       seats: { 0: { pos: 'D4' }, 1: { hand: [card] }, 2: { pos: 'D4' } },
     });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playStill(s0, card);
     // 席 2（turn=1）→ 席 3 → 席 1 の順。席 3 が先に判定され、すべて取る。
     expect(P(s1, 2).held.normal).toBe(1);
     expect(P(s1, 0).held.normal).toBe(0);
@@ -68,9 +68,9 @@ describe('怨霊の部屋（rules v0.1 §6.3）', () => {
   test('§6.3 怨霊コマがいる部屋のチップは獲得できない', () => {
     const ids = cardIds();
     const card = ids.barrier();
-    // 怨霊と駒が同じ部屋にいる局面を直接作る（第 2 段階では通常の進行で生じない）。
+    // 怨霊と駒が同じ部屋にいる局面を直接作る（接触で駒がスタート地点に戻るため、通常の進行では生じない）。
     const s0 = arrange({ wraith: 'D4', chips: [{ cell: 'D4' }, { cell: 'A5' }], seats: { 0: { hand: [card] }, 1: { pos: 'D4' } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playStill(s0, card);
     expect(P(s1, 1).held.normal).toBe(0);
     expect(s1.chips.map((c) => c.cell)).toContain('D4');
   });
@@ -108,7 +108,7 @@ describe('10 点到達による終了（rules v0.1 §6.5・§9.1）', () => {
         2: { hand: [card], pos: 'D3', held: { normal: 9 } },
       },
     });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playStill(s0, card);
     // 手番は席 3。席 3 は D3（チップなし）→ 席 1 が B2 で 10 点 → 席 2 は判定しない。
     expect(s1.result).toEqual({ reason: 'score', winners: [0], scores: [10, 9, 9] });
     expect(P(s1, 1).held.normal).toBe(9);

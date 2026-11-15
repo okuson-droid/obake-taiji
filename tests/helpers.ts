@@ -1,7 +1,7 @@
 // テスト用の補助関数。特定の局面を作るために GameState を直接組み立てる。
 // ゲームロジック（src/game）からは使わない。
 import { MOVE_CARDS } from '../src/data/cards.ts';
-import { createGame } from '../src/game/engine.ts';
+import { applyMove, createGame } from '../src/game/engine.ts';
 import { askPlayCard } from '../src/game/executor.ts';
 import { next as nextRandom, seedToState } from '../src/game/rng.ts';
 import type {
@@ -124,4 +124,16 @@ export const P = (s: GameState, seat: number): PlayerState => {
   const p = s.players[seat];
   if (p === undefined) throw new Error(`席 ${seat} は存在しない`);
   return p;
+};
+
+/**
+ * 手番プレイヤーが通せん棒カード card を使い、設置できる最初の辺（辺 ID の昇順で先頭）に置く。
+ * 駒もチップも動かさずに、獲得判定以降の手番の処理を進めたいときに使う（rules v0.1 §5.5(a)）。
+ */
+export const playStill = (s: GameState, card: MoveCardId): GameState => {
+  const t = applyMove(s, play(card));
+  if (t.pending?.kind !== 'barrierTarget') throw new Error(`${card} は通せん棒カードではない`);
+  const place = t.pending.options.find((o) => o.startsWith('barrier:place:'));
+  if (place === undefined) throw new Error('設置できる辺がない');
+  return applyMove(t, place);
 };

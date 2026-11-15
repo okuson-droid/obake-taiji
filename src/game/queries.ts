@@ -1,8 +1,8 @@
 // UI 向けの派生値（design.md §4.5）。UI は移動先や得点をみずから再計算せず、これらを呼ぶ。
-// canPlaceBarrier・placeableEdges は第 3 段階で追加する。
+import { EDGE_IDS } from '../data/board.ts';
 import { MOVE_CARD_BY_ID } from '../data/cards.ts';
-import { edgeInDir, hasBarrier, humanMoveDir, neighbor } from './board-ops.ts';
-import type { Cell, Chip, Dir, GameState, MoveCardId, PlayerState, Seat } from './types.ts';
+import { edgeInDir, hasBarrier, humanMoveDir, isConnected, neighbor } from './board-ops.ts';
+import type { Cell, Chip, Dir, EdgeId, GameState, MoveCardId, PlayerState, Seat } from './types.ts';
 
 /** 獲得済みチップの点数。通常 1 点、ゴールデン 3 点（rules v0.1 §6.4） */
 export const pointsOf = (held: PlayerState['held']): number => held.normal + held.golden * 3;
@@ -51,3 +51,13 @@ export const deckCounts = (state: GameState): { move: number; moveDiscard: numbe
   moveDiscard: state.moveDiscard.length,
   ghost: state.ghostDeck.length,
 });
+
+/**
+ * 通せん棒を設置できるかを判定する（rules v0.1 §2.3・§5.5(a)）。
+ * 盤内の辺であり、通せん棒が置かれておらず、設置後も 36 部屋が互いに行き来できる場合に真とする。
+ */
+export const canPlaceBarrier = (state: GameState, edge: EdgeId): boolean =>
+  EDGE_IDS.includes(edge) && !hasBarrier(state.barriers, edge) && isConnected([...state.barriers, edge]);
+
+/** 通せん棒を設置できる辺を、辺 ID の昇順に返す（design.md §6.1）。 */
+export const placeableEdges = (state: GameState): EdgeId[] => EDGE_IDS.filter((e) => canPlaceBarrier(state, e));

@@ -1,27 +1,28 @@
-// rules v0.1 §4（手番の進行）。お化け移動カード・通せん棒カードの仮実装（design.md §11 第 2 段階）を含む。
+// rules v0.1 §4（手番の進行）。対象を選ぶカード（§5.4・§5.5）を使った手番の流れを含む。
 import { describe, expect, test } from 'vitest';
 import { applyMove, createGame, getOptions } from '../src/game/engine.ts';
 import { shuffle } from '../src/game/rng.ts';
 import type { GameEvent, OptionId } from '../src/game/types.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, play, playStill } from './helpers.ts';
 
 describe('手番の順（rules v0.1 §4.1・§4.8）', () => {
   test('§4.1 席番号の順に回り、最後の席の次は席 1 に戻る', () => {
     const ids = cardIds();
+    const b = [ids.barrier(), ids.barrier(), ids.barrier(), ids.barrier()];
     let s = arrange({
       players: 3,
       chips: [{ cell: 'D4' }],
       seats: {
-        0: { hand: [ids.barrier()] },
-        1: { hand: [ids.barrier()] },
-        2: { hand: [ids.barrier()] },
+        0: { hand: [b[0]!, b[3]!] },
+        1: { hand: [b[1]!] },
+        2: { hand: [b[2]!] },
       },
     });
     const seen: number[] = [];
     for (let i = 0; i < 4; i++) {
       seen.push(s.turn);
       expect(s.pending?.player).toBe(s.turn);
-      s = applyMove(s, getOptions(s)[0]!);
+      s = playStill(s, P(s, s.turn).hand.find((id) => b.includes(id))!);
     }
     expect(seen).toEqual([0, 1, 2, 0]);
   });
@@ -134,30 +135,44 @@ describe('お化けの補充（rules v0.1 §4.6）', () => {
   });
 });
 
-describe('仮実装：お化け移動カード・通せん棒カード（第 2 段階、rules v0.1 §5.4・§5.5 は第 3 段階）', () => {
-  for (const kind of ['ghost', 'barrier'] as const) {
-    test(`仮実装：${kind === 'ghost' ? 'お化け移動' : '通せん棒'}カードは捨て札に置かれ、効果なしで手番が進む（§4.3・§4.7・§4.8）`, () => {
-      const ids = cardIds();
-      const card = kind === 'ghost' ? ids.ghost('E') : ids.barrier();
-      const s0 = arrange({ chips: [{ cell: 'D4' }, { cell: 'B2' }], seats: { 0: { hand: [card] } } });
-      const s1 = applyMove(s0, play(card));
-      expect(s1.moveDiscard.at(-1)).toBe(card);
-      expect(s1.chips).toEqual(s0.chips);
-      expect(s1.wraith).toBe(s0.wraith);
-      expect(s1.barriers).toEqual(s0.barriers);
-      expect(s1.players.map((p) => [p.pos, p.facing])).toEqual(s0.players.map((p) => [p.pos, p.facing]));
-      expect(P(s1, 0).hand).toHaveLength(4);
-      expect(s1.turn).toBe(1);
-      expect(s1.pending?.kind).toBe('playCard');
-    });
-  }
+describe('対象を選ぶカード（rules v0.1 §4.3・§4.4、§5.4・§5.5）', () => {
+  test('§4.4・§5.4 お化け移動カードを使うと ghostTarget の選択待ちになり、まだカードを引かない', () => {
+    const ids = cardIds();
+    const card = ids.ghost('E');
+    const s0 = arrange({ chips: [{ cell: 'D4' }, { cell: 'B2' }], seats: { 0: { hand: [card] } } });
+    const s1 = applyMove(s0, play(card));
+    expect(s1.pending).toEqual({ kind: 'ghostTarget', player: 0, card, options: ['ghost:c1', 'ghost:c2', 'ghost:wraith'] });
+    expect(s1.moveDiscard.at(-1)).toBe(card);
+    expect(P(s1, 0).hand).toHaveLength(3);
+    expect(s1.turn).toBe(0);
+    expect(s1.rng).toBe(s0.rng);
+    expect(s1.events).toEqual([{ type: 'cardPlayed', seat: 0, card }]);
+  });
 
-  test('仮実装：お化け移動カードを使った手番でも獲得判定を行う（§4.5、R-09）', () => {
+  test('§4.4・§5.5 通せん棒カードを使うと barrierTarget の選択待ちになり、まだカードを引かない', () => {
+    const ids = cardIds();
+    const card = ids.barrier();
+    const s0 = arrange({ chips: [{ cell: 'D4' }], seats: { 0: { hand: [card] } } });
+    const s1 = applyMove(s0, play(card));
+    expect(s1.pending?.kind).toBe('barrierTarget');
+    expect(s1.pending?.player).toBe(0);
+    expect(P(s1, 0).hand).toHaveLength(3);
+    expect(s1.turn).toBe(0);
+  });
+
+  test('§4.5〜§4.8 対象を選ぶと、獲得判定・補充・引く・次の手番へ進む', () => {
     const ids = cardIds();
     const card = ids.ghost('N');
     const s0 = arrange({ chips: [{ cell: 'F6' }, { cell: 'B2' }], seats: { 0: { hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = applyMove(applyMove(s0, play(card)), 'ghost:c2');
+    // c2 は B2 から B1 へ動く。席 2 は F6 のチップを判定で取る（R-09）。
+    expect(s1.chips).toEqual([{ id: 'c2', kind: 'normal', cell: 'B1' }]);
     expect(P(s1, 1).held.normal).toBe(1);
-    expect(s1.events).toContainEqual({ type: 'acquired', seat: 1, chips: ['c1'], points: 1 });
+    expect(P(s1, 0).hand).toHaveLength(4);
+    expect(s1.turn).toBe(1);
+    expect(s1.pending?.kind).toBe('playCard');
+    const types = s1.events.map((e) => e.type);
+    expect(types.indexOf('ghostMoved')).toBeLessThan(types.indexOf('acquired'));
+    expect(types.indexOf('acquired')).toBeLessThan(types.indexOf('cardDrawn'));
   });
 });

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { applyMove, createGame, getOptions, isGameOver } from '../src/game/engine.ts';
 import { isCheckpoint, replay, undoLast } from '../src/game/history.ts';
 import type { GameConfig, GameState, OptionId } from '../src/game/types.ts';
-import { arrange, cardIds, play, randomPicker } from './helpers.ts';
+import { arrange, cardIds, play, playStill, randomPicker } from './helpers.ts';
 
 /** 乱択で n 手進め、適用した選択肢 ID の列と各局面を返す。 */
 const playRandom = (config: GameConfig, seed: number, n: number) => {
@@ -127,14 +127,39 @@ describe('isCheckpoint の各条件（design §4.2）', () => {
     const ids = cardIds();
     const card = ids.barrier();
     const s0 = arrange({ chips: [{ cell: 'C3' }], seats: { 0: { hand: [card] } } });
-    const s = applyMove(s0, play(card));
+    const s = playStill(s0, card);
     expect(s.pending?.kind).toBe('overlapChoice');
     expect(isCheckpoint(s, applyMove(s, 'overlap:continue'))).toBe(false);
     expect(isCheckpoint(s, applyMove(s, 'overlap:purge'))).toBe(true);
   });
+
+  test('§5.4・§5.5 カードを選んだ後、対象を選ぶ前の段階はチェックポイントではない（U-03）', () => {
+    const ids = cardIds();
+    const g = ids.ghost('N');
+    const b = ids.barrier();
+    const s0 = arrange({ chips: [{ cell: 'D4' }], seats: { 0: { hand: [g, b] } } });
+    const afterGhost = applyMove(s0, play(g));
+    const afterBarrier = applyMove(s0, play(b));
+    expect(isCheckpoint(s0, afterGhost)).toBe(false);
+    expect(isCheckpoint(s0, afterBarrier)).toBe(false);
+    // 対象を選ぶとカードを引くためチェックポイントになる。
+    expect(isCheckpoint(afterGhost, applyMove(afterGhost, 'ghost:c1'))).toBe(true);
+    expect(isCheckpoint(afterBarrier, applyMove(afterBarrier, getOptions(afterBarrier)[0]!))).toBe(true);
+  });
 });
 
 describe('undoLast（design §4.2、U-03）', () => {
+  test('§5.4 カードの選択を取り消すと、カードの使用の選択待ちに戻る', () => {
+    const ids = cardIds();
+    const g = ids.ghost('N');
+    const checkpoint = arrange({ chips: [{ cell: 'D4' }], seats: { 0: { hand: [g] } } });
+    const moves: OptionId[] = [play(g)];
+    expect(replay(checkpoint, moves).pending?.kind).toBe('ghostTarget');
+    const undone = undoLast(checkpoint, moves);
+    expect(undone).toEqual([]);
+    expect(replay(checkpoint, undone!)).toEqual(checkpoint);
+  });
+
   test('moves が空なら null（取り消せない）', () => {
     expect(undoLast(createGame({ players: 2 }, 1), [])).toBeNull();
   });
@@ -149,7 +174,7 @@ describe('undoLast（design §4.2、U-03）', () => {
     const ids = cardIds();
     const card = ids.barrier();
     const s0 = arrange({ chips: [{ cell: 'C3' }], seats: { 0: { hand: [card] } } });
-    const checkpoint = applyMove(s0, play(card));
+    const checkpoint = playStill(s0, card);
     const moves: OptionId[] = ['overlap:continue'];
     expect(replay(checkpoint, moves).pending?.kind).toBe('playCard');
     const undone = undoLast(checkpoint, moves);
