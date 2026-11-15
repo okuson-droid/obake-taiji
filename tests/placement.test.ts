@@ -4,7 +4,7 @@ import { GHOST_CARD_BY_ID } from '../src/data/cards.ts';
 import { applyMove, createGame, getOptions, isGameOver } from '../src/game/engine.ts';
 import { rollDie } from '../src/game/rng.ts';
 import type { GameEvent, GameState } from '../src/game/types.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, play, playStill } from './helpers.ts';
 
 /** 席 1 が D3 から南へ進んで D4 の最後の 1 枚を取り、配置が起きる局面 */
 const triggerPlacement = (extra: Parameters<typeof arrange>[0] = {}) => {
@@ -122,7 +122,7 @@ describe('お化けカードの山札が尽きたとき（rules v0.1 §8.2・§9
     const card = ids.barrier();
     // 全員がチップを取らないまま、手番の終わりにボードが空で山札が尽きる。
     const s0 = arrange({ chips: [], ghostDeck: ['G00', 'G01', 'G02'], seats: { 0: { hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playStill(s0, card);
     expect(s1.result).toEqual({ reason: 'ghostDeck', winners: [0, 1], scores: [0, 0] });
   });
 

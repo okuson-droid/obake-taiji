@@ -1,11 +1,11 @@
 // ゲームの公開 API（design.md §4.1）。
 // いずれの関数も引数の state を変更しない。内部では複製を作り、executor.ts で効果キューを進める。
 import { START_ASSIGNMENT, START_FACING, WRAITH_START } from '../data/board.ts';
-import { GHOST_CARDS, MOVE_CARDS } from '../data/cards.ts';
+import { GHOST_CARDS, MOVE_CARDS, MOVE_CARD_BY_ID } from '../data/cards.ts';
 import { askPlayCard, loseChip, playCard, run } from './executor.ts';
 import { pointsOf } from './queries.ts';
 import { seedToState, shuffle } from './rng.ts';
-import type { GameConfig, GameState, MoveCardId, OptionId, PlayerState, Seat } from './types.ts';
+import type { ChipId, EdgeId, GameConfig, GameState, MoveCardId, OptionId, PlayerState, Seat } from './types.ts';
 
 /** 準備で配る手札の枚数（rules v0.1 §3.4） */
 export const HAND_SIZE = 4;
@@ -114,10 +114,25 @@ export const applyMove = (state: GameState, option: OptionId): GameState => {
       loseChip(s, pending.player, option === 'lose:golden' ? 'golden' : 'normal');
       run(s);
       break;
-    case 'ghostTarget':
-    case 'barrierTarget':
-      // 第 2 段階では、これらの選択待ちを立てない（お化け移動・通せん棒は仮実装）。
-      throw new Error(`選択待ち ${pending.kind} は第 2 段階では実装していない`);
+    case 'ghostTarget': {
+      // rules v0.1 §5.4。対象を動かした後、待たせていた獲得判定以降の手番の処理へ進む。
+      const def = MOVE_CARD_BY_ID[pending.card];
+      if (def?.type !== 'ghost') throw new Error(`${pending.card} はお化け移動カードではない`);
+      const target = option.slice('ghost:'.length) as ChipId | 'wraith';
+      s.effectQueue.unshift({ op: 'moveGhost', target, dir: def.dir });
+      run(s);
+      break;
+    }
+    case 'barrierTarget': {
+      // rules v0.1 §5.5。設置または撤去の後、獲得判定以降の手番の処理へ進む。
+      if (option.startsWith('barrier:place:')) {
+        s.effectQueue.unshift({ op: 'placeBarrier', edge: option.slice('barrier:place:'.length) as EdgeId });
+      } else {
+        s.effectQueue.unshift({ op: 'removeBarrier', edge: option.slice('barrier:remove:'.length) as EdgeId });
+      }
+      run(s);
+      break;
+    }
   }
 
   if (s.result === null && s.pending === null) {

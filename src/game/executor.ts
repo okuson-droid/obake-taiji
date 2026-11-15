@@ -1,14 +1,18 @@
 // 効果キューの実行（design.md §3.5・§5）。
 // run は applyMove・createGame が作った作業用の複製を直接書き換える。呼び出し側に渡す前の
 // 複製だけを対象とするため、公開 API（engine.ts）から見れば純粋関数である。
-import { START_FACING } from '../data/board.ts';
+import { START_CELLS, START_FACING } from '../data/board.ts';
 import { GHOST_CARD_BY_ID, MOVE_CARD_BY_ID } from '../data/cards.ts';
 import { COLS, ROWS } from '../data/board.ts';
+import { neighbor } from './board-ops.ts';
 import { rollDie, shuffle } from './rng.ts';
-import { chipsAt, playerAt, pointsOf, previewHumanMove } from './queries.ts';
+import { canPlaceBarrier, chipsAt, placeableEdges, playerAt, pointsOf, previewHumanMove } from './queries.ts';
 import type {
   Cell,
+  ChipId,
   ChipKind,
+  Dir,
+  EdgeId,
   GameEvent,
   GameResult,
   GameState,
@@ -90,17 +94,42 @@ export const playCard = (state: GameState, card: MoveCardId): void => {
 
   const def = MOVE_CARD_BY_ID[card];
   if (def === undefined) throw new Error(`${card} は存在しないカードである`);
-  const effect: Instr[] = [];
-  if (def.type === 'human') {
-    effect.push({ op: 'moveHuman', seat, card });
+  // 1 手番の標準の命令列（design.md §3.5）。カードの効果を解決する命令は、この前に積む。
+  const rest: Instr[] = [{ op: 'judge' }, { op: 'refillIfEmpty' }, { op: 'draw', seat }, { op: 'endTurn' }];
+  switch (def.type) {
+    case 'human':
+      state.effectQueue.unshift({ op: 'moveHuman', seat, card }, ...rest);
+      return;
+    case 'ghost':
+      // 対象を選ぶまで手番の残りを待たせる（rules v0.1 §5.4、design.md §5.3）。
+      state.effectQueue.unshift(...rest);
+      state.pending = { kind: 'ghostTarget', player: seat, card, options: ghostTargetOptions(state) };
+      return;
+    case 'barrier':
+      // 対象を選ぶまで手番の残りを待たせる（rules v0.1 §5.5、design.md §5.3）。
+      state.effectQueue.unshift(...rest);
+      state.pending = { kind: 'barrierTarget', player: seat, card, options: barrierTargetOptions(state) };
+      return;
   }
-  // 第 2 段階の仮実装：お化け移動カード（rules v0.1 §5.4）と通せん棒カード（§5.5）は効果なしとし、
-  // ghostTarget・barrierTarget の選択待ちを立てずに、獲得判定以降の手番の処理へ進む。
-  // 第 3 段階で本実装に置き換える（design.md §11、decisions.md D-11）。
-
-  // 1 手番の標準の命令列（design.md §3.5）
-  state.effectQueue.unshift(...effect, { op: 'judge' }, { op: 'refillIfEmpty' }, { op: 'draw', seat }, { op: 'endTurn' });
 };
+
+/**
+ * お化け移動カードの選択肢（design.md §6.1）。ボード上のチップを配置順に並べ、その後に怨霊を置く。
+ * 壁に当たって動かない対象も含める。
+ */
+export const ghostTargetOptions = (state: GameState): OptionId[] => [
+  ...state.chips.map((c): OptionId => `ghost:${c.id}`),
+  'ghost:wraith',
+];
+
+/**
+ * 通せん棒カードの選択肢（design.md §6.1）。連結条件を満たす空き辺の設置を辺 ID の昇順に並べ、
+ * その後に置かれている辺の撤去を昇順に並べる。
+ */
+export const barrierTargetOptions = (state: GameState): OptionId[] => [
+  ...placeableEdges(state).map((e): OptionId => `barrier:place:${e}`),
+  ...[...state.barriers].sort().map((e): OptionId => `barrier:remove:${e}`),
+];
 
 const execStartTurn = (state: GameState): void => {
   // design.md §5.2
@@ -128,6 +157,45 @@ const execMoveHuman = (state: GameState, seat: Seat, card: MoveCardId): void => 
   if (preview.contact) {
     state.effectQueue.unshift({ op: 'contact', seats: [seat] });
   }
+};
+
+const execMoveGhost = (state: GameState, target: ChipId | 'wraith', dir: Dir): void => {
+  // rules v0.1 §5.4・§5.6・§7.1〜§7.3、design.md §5.5。お化けチップと怨霊コマは通せん棒を無視する。
+  if (target === 'wraith') {
+    const from = state.wraith;
+    const to = neighbor(from, dir);
+    // 外周の壁、または行き先がスタート地点なら動かない（rules v0.1 §7.3、R-08）。
+    const blocked = to === null || START_CELLS.includes(to);
+    const dest = blocked ? from : to;
+    state.wraith = dest;
+    emit(state, { type: 'wraithMoved', from, to: dest, blocked });
+    if (blocked) return;
+    // 動いた先にプレイヤー駒がいれば、その全員と接触する（rules v0.1 §7.2(b)）。
+    const seats = state.players.filter((p) => p.pos === dest).map((p) => p.seat);
+    if (seats.length > 0) state.effectQueue.unshift({ op: 'contact', seats });
+    return;
+  }
+  const chip = state.chips.find((c) => c.id === target);
+  if (chip === undefined) throw new Error(`チップ ${target} はボード上にない`);
+  const from = chip.cell;
+  const to = neighbor(from, dir);
+  // 外周の壁の方角なら動かない（rules v0.1 §5.4、R-03）。
+  chip.cell = to ?? from;
+  emit(state, { type: 'ghostMoved', chip: chip.id, from, to: chip.cell, blocked: to === null });
+};
+
+const execPlaceBarrier = (state: GameState, edge: EdgeId): void => {
+  // rules v0.1 §5.5(a)。barriers は昇順に保つ。
+  if (!canPlaceBarrier(state, edge)) throw new Error(`辺 ${edge} には通せん棒を設置できない`);
+  state.barriers = [...state.barriers, edge].sort();
+  emit(state, { type: 'barrierPlaced', edge });
+};
+
+const execRemoveBarrier = (state: GameState, edge: EdgeId): void => {
+  // rules v0.1 §5.5(b)。誰が設置した通せん棒でもよい。
+  if (!state.barriers.includes(edge)) throw new Error(`辺 ${edge} に通せん棒はない`);
+  state.barriers = state.barriers.filter((e) => e !== edge);
+  emit(state, { type: 'barrierRemoved', edge });
 };
 
 const execContact = (state: GameState, seats: Seat[]): void => {
@@ -277,10 +345,11 @@ const exec = (state: GameState, instr: Instr): void => {
     case 'endTurn':
       return execEndTurn(state);
     case 'moveGhost':
+      return execMoveGhost(state, instr.target, instr.dir);
     case 'placeBarrier':
+      return execPlaceBarrier(state, instr.edge);
     case 'removeBarrier':
-      // 第 3 段階で実装する。第 2 段階ではこれらの命令を積まない。
-      throw new Error(`命令 ${instr.op} は第 2 段階では実装していない`);
+      return execRemoveBarrier(state, instr.edge);
   }
 };
 

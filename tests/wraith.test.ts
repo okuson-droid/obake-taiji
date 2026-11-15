@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { applyMove, getOptions } from '../src/game/engine.ts';
 import { overlapConditionHolds } from '../src/game/executor.ts';
 import type { GameState } from '../src/game/types.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, play, playStill } from './helpers.ts';
 
 /** 席 1 が C4 から北へ進み、C3 の怨霊の部屋に入る局面 */
 const enterWraith = (held: { normal?: number; golden?: number }, extra: Parameters<typeof arrange>[0] = {}) => {
@@ -92,13 +92,13 @@ describe('接触した手番の獲得判定（rules v0.1 §4.5・§7.4）', () =
   test('§7.4 次の手番以降は通常どおり獲得判定を行う', () => {
     const { s1 } = enterWraith({}, { chips: [{ cell: 'B5' }, { cell: 'A1' }], seats: { 1: { pos: 'B5' } } });
     expect(s1.contactThisTurn).toBe(false);
-    // 席 2 の手番：駒を動かさないよう、手札の先頭を通せん棒カード（仮実装）に差し替えて使う。
+    // 席 2 の手番：駒を動かさないよう、手札の先頭を通せん棒カードに差し替えて使う。
     const s2in: GameState = structuredClone(s1);
     const ids = cardIds();
     const barrier = ids.barrier();
     s2in.players[1]!.hand[0] = barrier;
     s2in.pending = { kind: 'playCard', player: 1, options: s2in.players[1]!.hand.map((id) => `play:${id}` as const) };
-    const s2 = applyMove(s2in, play(barrier));
+    const s2 = playStill(s2in, barrier);
     expect(P(s2, 1).held.normal).toBe(1);
     expect(P(s2, 0).held.normal).toBe(1);
   });
@@ -115,7 +115,7 @@ describe('怨霊とお化けチップの重なり（rules v0.1 §7.5）', () => 
     const ids = cardIds();
     const card = ids.barrier();
     const s0 = arrange({ chips, seats: { 0: { hand: [card] } } });
-    return applyMove(s0, play(card));
+    return playStill(s0, card);
   };
 
   test('§7.5 チップがすべて怨霊と同じ部屋にあれば、手番の開始時に 2 択の選択待ちになる', () => {
@@ -156,7 +156,7 @@ describe('怨霊とお化けチップの重なり（rules v0.1 §7.5）', () => 
     const ids = cardIds();
     const card = ids.barrier();
     const s0 = arrange({ chips: [{ cell: 'C3' }], ghostDeck: ['G00', 'G01', 'G02'], seats: { 0: { hand: [card] } } });
-    const s = applyMove(s0, play(card));
+    const s = playStill(s0, card);
     const s1 = applyMove(s, 'overlap:purge');
     expect(s1.result?.reason).toBe('ghostDeck');
     expect(s1.pending).toBeNull();
