@@ -1,0 +1,441 @@
+/* 暫定の見た目（ui_design.md ができるまで）。外部のフォント・画像は使わない。 */
+:root {
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --text: #1f1f1f;
+  --muted: #5f5f5f;
+  --line: #c9c4b8;
+  --accent: #6a3fb5;
+  --ok: #2a9d4b;
+  --ng: #c62828;
+  --gold: #e0b400;
+  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+h1,
+h2 {
+  margin: 0 0 8px;
+}
+
+h2 {
+  font-size: 1rem;
+}
+
+button,
+.action {
+  font: inherit;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 8px;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  padding: 6px 12px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button.selectable,
+.action {
+  border-color: var(--accent);
+}
+
+/* トップ */
+.top {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.top-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.player-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.player-buttons .action {
+  flex: 1;
+  font-size: 1.1rem;
+}
+
+/* 目隠し画面 */
+.blind {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.blind-button {
+  width: 100%;
+  max-width: 420px;
+  min-height: 200px;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 1.2rem;
+  border-width: 4px;
+}
+
+.blind-seat {
+  font-size: 1.6rem;
+  font-weight: bold;
+}
+
+/* 対局画面 */
+.game {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 960px) {
+  .game {
+    max-width: 960px;
+    grid-template-columns: minmax(0, 540px) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.play-area,
+.side {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.turn-badge {
+  color: #fff;
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.prompt {
+  font-size: 0.95rem;
+}
+
+.board {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--panel);
+  border-radius: 8px;
+  user-select: none;
+}
+
+.board .cell {
+  fill: #fbfaf6;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.board .cell.start {
+  fill: #ecebe6;
+}
+
+.board .head,
+.board .start-label {
+  font-size: 11px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+.board .start-label {
+  font-size: 10px;
+}
+
+.board .barrier {
+  stroke: #222;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.board .hit {
+  fill: transparent;
+}
+
+.board .tap {
+  cursor: pointer;
+}
+
+.board .selectable .hit {
+  fill: #6a3fb533;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.board .chip {
+  fill: #fff;
+  stroke: #444;
+  stroke-width: 1.5;
+}
+
+.board .chip.golden {
+  fill: var(--gold);
+}
+
+.board .chip-count,
+.board .piece-label,
+.board .wraith-label {
+  font-size: 11px;
+  font-weight: bold;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.board .piece-label,
+.board .wraith-label {
+  fill: #fff;
+}
+
+.board .wraith {
+  fill: #5b2a86;
+  stroke: #2d1245;
+  stroke-width: 1.5;
+}
+
+.board .piece {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.board .preview {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: 6 4;
+}
+
+.board .preview.contact {
+  stroke: var(--ng);
+}
+
+.board .edge-hit {
+  cursor: pointer;
+}
+
+.board .edge-hit.place {
+  fill: #2a9d4b66;
+}
+
+.board .edge-hit.remove {
+  fill: #c6282877;
+}
+
+.board .edge-hit.disabled {
+  fill: #00000010;
+}
+
+.legend {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.message {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff4e5;
+  border: 1px solid #f0c27b;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.controls .action {
+  flex: 1 1 140px;
+}
+
+.hand {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.card {
+  min-height: 72px;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.card.disabled {
+  opacity: 0.55;
+}
+
+.card.previewing {
+  border-color: var(--ng);
+  border-width: 3px;
+}
+
+.card.kind-ghost {
+  background: #f3edfb;
+}
+
+.card.kind-barrier {
+  background: #ececec;
+}
+
+.card-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.card-kind {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.preview-text {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.fallback {
+  border: 2px dashed var(--ng);
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.fallback-button {
+  overflow-wrap: anywhere;
+}
+
+.info,
+.log {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.seat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.seat.current {
+  background: #f1ecfa;
+}
+
+.seat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+}
+
+.dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.turn-mark {
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.held {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.held-chip {
+  font-size: 0.85rem;
+}
+
+span.held-chip {
+  padding: 2px 4px;
+}
+
+.held-chip.golden {
+  background: #fff6cc;
+}
+
+.hand-count {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.decks {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.log ol {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.85rem;
+}
+
+/* 結果 */
+.result {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.scores {
+  list-style: none;
+  padding: 0;
+}
+
+.scores li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
