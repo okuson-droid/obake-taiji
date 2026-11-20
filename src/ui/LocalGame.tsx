@@ -1,6 +1,6 @@
 // ローカル対戦の画面（design.md §8、decisions.md U-01〜U-06）。
 // 局面は session.ts（チェックポイント＋選択肢 ID の列）で持つ。判定は src/game の関数だけで行う。
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MOVE_CARD_BY_ID } from '../data/cards.ts';
 import { getOptions } from '../game/engine.ts';
 import { explain } from '../game/explain.ts';
@@ -8,6 +8,7 @@ import { deckCounts, previewHumanMove, scoreOf } from '../game/queries.ts';
 import { targetOf, type Target } from '../game/targets.ts';
 import type { GameConfig, GameState, MoveCardId, OptionId, Seat } from '../game/types.ts';
 import { maskEvents } from '../game/visibility.ts';
+import { planAnimation, type AnimationPlan } from './animation.ts';
 import { CardFace } from './assets/art.tsx';
 import { Board, type BoardPreview } from './Board.tsx';
 import { eventText } from './eventText.ts';
@@ -26,6 +27,12 @@ const PROMPTS: Readonly<Record<NonNullable<GameState['pending']>['kind'], string
   penaltyChip: '怨霊に触れました。失うお化けを情報欄でタップしてください',
 };
 
+/** 端末が動きを減らす設定なら、演出を省く。 */
+const prefersReducedMotion = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+/** 再生中の演出。viewer は演出を見ている人（選択をした人）である。 */
+type Playing = { plan: AnimationPlan; viewer: Seat; id: number };
+
 /** 安全網の数を 1 つの局面について 1 回だけ数えるための鍵 */
 const stateKey = (s: Session): string => `${s.checkpoint.turnNo}:${s.checkpoint.rng}:${s.moves.join(',')}`;
 
@@ -43,16 +50,35 @@ export const LocalGame = ({ players, seed }: { players: GameConfig['players']; s
     setPreviewState(card);
   };
 
+  // 選択の後に、その選択で起きた出来事の演出を再生する。再生中は手札を出さず、終わってから次の画面へ進む。
+  const [playing, setPlaying] = useState<Playing | null>(null);
+  const playCount = useRef(0);
+  useEffect(() => {
+    if (playing === null) return;
+    const timer = window.setTimeout(() => setPlaying(null), playing.plan.total);
+    return () => window.clearTimeout(timer);
+  }, [playing]);
+
   const act = (option: OptionId) => {
     setPreview(null);
     setMessage(null);
-    setSession((s) => choose(s, option));
+    const next = choose(session, option);
+    setSession(next);
+    if (viewer === null || prefersReducedMotion()) return;
+    const plan = planAnimation(state, currentState(next));
+    if (plan !== null) {
+      playCount.current += 1;
+      setPlaying({ plan, viewer, id: playCount.current });
+    }
   };
   const showExplain = (target: Target) => {
     if (viewer === null) return;
     setMessage(explain(state, viewer, target));
   };
 
+  if (playing !== null) {
+    return <Watching key={playing.id} session={session} state={state} playing={playing} onSkip={() => setPlaying(null)} />;
+  }
   if (state.result !== null) return <Result state={state} />;
   if (viewer === null) return null;
   if (revealedFor !== viewer) {
@@ -88,6 +114,44 @@ export const LocalGame = ({ players, seed }: { players: GameConfig['players']; s
         setSession(undo);
       }}
     />
+  );
+};
+
+const NO_OPTIONS: ReadonlyMap<OptionId, Target> = new Map();
+const noop = () => {};
+
+/** 演出を見せる画面。盤面は選択後の局面で描き、手札は出さない。タップで飛ばせる。 */
+const Watching = (p: { session: Session; state: GameState; playing: Playing; onSkip: () => void }) => {
+  const events = maskEvents(allEvents(p.session), p.playing.viewer)
+    .map(eventText)
+    .filter((t): t is string => t !== null)
+    .slice(-LOG_LINES);
+  return (
+    <div className="game watching" data-testid="watching">
+      <section className="play-area">
+        <header className="status">
+          <span className="turn-badge" style={{ background: seatColor(p.playing.viewer) }}>
+            {seatName(p.playing.viewer)}
+          </span>
+          <span className="prompt">お化け屋敷が動いています…</span>
+        </header>
+        <Board state={p.state} options={NO_OPTIONS} barrierMode={false} preview={null} onChoose={noop} onExplain={noop} plan={p.playing.plan} />
+        <button type="button" className="skip" data-testid="skip-animation" onClick={p.onSkip}>
+          タップで飛ばす
+        </button>
+      </section>
+      <aside className="side">
+        <InfoPanel state={p.state} viewer={p.playing.viewer} options={NO_OPTIONS} act={noop} showExplain={noop} />
+        <section className="log" aria-label="出来事">
+          <h2>出来事</h2>
+          <ol>
+            {events.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ol>
+        </section>
+      </aside>
+    </div>
   );
 };
 
