@@ -1,19 +1,28 @@
-/* 暫定の見た目（ui_design.md ができるまで）。外部のフォント・画像は使わない。 */
+/* 見た目：案 C「古い洋館」（深緑の壁と燭台の金）。外部のフォント・画像は使わない。
+   この見た目は 1 つの世界に絞った暗い配色であり、端末のライト／ダーク設定では切り替えない。
+   お化けの揺れは控えめにし、動きを減らす設定（prefers-reduced-motion）では止める。 */
 :root {
-  --bg: #f6f4ef;
-  --panel: #ffffff;
-  --text: #1f1f1f;
-  --muted: #5f5f5f;
-  --line: #c9c4b8;
-  --accent: #6a3fb5;
-  --ok: #2a9d4b;
-  --ng: #c62828;
-  --gold: #e0b400;
-  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+  --wall: #17201b; /* 背景（深緑の壁） */
+  --panel: #212d27; /* 情報欄などの面 */
+  --panel-edge: #4f5f4a; /* 面の縁 */
+  --cell: #2f3e35; /* 部屋 */
+  --cell-dark: #2a382f; /* 部屋（市松の暗い側） */
+  --grid: #55684f; /* 部屋の境 */
+  --text: #ece3c8; /* 本文（羊皮紙色） */
+  --muted: #b1a684;
+  --gold: #c9a34a; /* 燭台の金。選べる要素の強調 */
+  --gold-soft: #c9a34a40;
+  --danger: #e0604f; /* 怨霊との接触の予告 */
+  --plank: #8a6a3e;
+  --ink: #2b2418;
+  --serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  --sans: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+  font-family: var(--sans);
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text);
-  background: var(--bg);
+  background: var(--wall);
+  color-scheme: dark;
 }
 
 * {
@@ -22,17 +31,24 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--wall);
+  background-image: radial-gradient(ellipse at 50% -10%, #2a3a30 0%, var(--wall) 60%);
+  background-attachment: fixed;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 h1,
 h2 {
   margin: 0 0 8px;
+  font-family: var(--serif);
+  text-wrap: balance;
 }
 
 h2 {
   font-size: 1rem;
+  color: var(--gold);
+  letter-spacing: 0.08em;
 }
 
 button,
@@ -40,8 +56,8 @@ button,
   font: inherit;
   min-height: 44px;
   min-width: 44px;
-  border-radius: 8px;
-  border: 2px solid var(--line);
+  border-radius: 6px;
+  border: 1.5px solid var(--panel-edge);
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
@@ -52,23 +68,89 @@ button,
   justify-content: center;
 }
 
-button.selectable,
-.action {
-  border-color: var(--accent);
+button:focus-visible,
+.action:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
 }
 
-/* トップ */
+button.selectable,
+.action {
+  border-color: var(--gold);
+}
+
+.action {
+  background: linear-gradient(#3a3424, #2c271b);
+  font-family: var(--serif);
+  font-weight: 700;
+}
+
+/* ---- お化けの揺れ（控えめ） ---- */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+
+.float {
+  animation: float 3.2s ease-in-out infinite;
+}
+
+.float.slow {
+  animation-duration: 4.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float {
+    animation: none;
+  }
+}
+
+/* ---- トップ ---- */
 .top {
   max-width: 520px;
   margin: 0 auto;
   padding: 24px 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.top-hero {
+  text-align: center;
+}
+
+.top-art {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+
+.top-hero h1 {
+  font-size: 2.2rem;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  margin: 0;
+}
+
+.top-sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .top-section {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
   padding: 16px;
+}
+
+.top-section p {
+  color: var(--muted);
 }
 
 .player-buttons {
@@ -78,10 +160,10 @@ button.selectable,
 
 .player-buttons .action {
   flex: 1;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
-/* 目隠し画面 */
+/* ---- 目隠し画面 ---- */
 .blind {
   min-height: 100vh;
   display: flex;
@@ -93,19 +175,26 @@ button.selectable,
 .blind-button {
   width: 100%;
   max-width: 420px;
-  min-height: 200px;
+  min-height: 260px;
   flex-direction: column;
   gap: 8px;
-  font-size: 1.2rem;
-  border-width: 4px;
+  font-size: 1.15rem;
+  border-width: 3px;
+  background: radial-gradient(circle at 50% 35%, #3a3424 0%, var(--panel) 70%);
+}
+
+.blind-art {
+  width: 96px;
+  height: 96px;
 }
 
 .blind-seat {
+  font-family: var(--serif);
   font-size: 1.6rem;
   font-weight: bold;
 }
 
-/* 対局画面 */
+/* ---- 対局画面 ---- */
 .game {
   max-width: 520px;
   margin: 0 auto;
@@ -138,49 +227,59 @@ button.selectable,
 .turn-badge {
   color: #fff;
   font-weight: bold;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 2px 8px;
   white-space: nowrap;
+  font-family: var(--serif);
+  text-shadow: 0 1px 0 #0006;
 }
 
 .prompt {
   font-size: 0.95rem;
 }
 
+/* 盤面 */
 .board {
   width: 100%;
   height: auto;
   display: block;
-  background: var(--panel);
-  border-radius: 8px;
+  background: #1c2620;
+  border: 2px solid var(--panel-edge);
+  border-radius: 6px;
   user-select: none;
 }
 
 .board .cell {
-  fill: #fbfaf6;
-  stroke: var(--line);
+  fill: var(--cell);
+  stroke: var(--grid);
   stroke-width: 1;
 }
 
-.board .cell.start {
-  fill: #ecebe6;
+.board .cell.dark {
+  fill: var(--cell-dark);
 }
 
-.board .head,
-.board .start-label {
+.board .head {
   font-size: 11px;
   fill: var(--muted);
   text-anchor: middle;
+  font-family: var(--serif);
 }
 
 .board .start-label {
-  font-size: 10px;
+  font-size: 9px;
+  fill: var(--muted);
+  font-weight: 700;
 }
 
-.board .barrier {
-  stroke: #222;
-  stroke-width: 6;
-  stroke-linecap: round;
+.board .barrier rect {
+  fill: var(--plank);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.board .barrier .nail {
+  fill: var(--gold);
 }
 
 .board .hit {
@@ -192,55 +291,48 @@ button.selectable,
 }
 
 .board .selectable .hit {
-  fill: #6a3fb533;
-  stroke: var(--accent);
+  fill: var(--gold-soft);
+  stroke: var(--gold);
   stroke-width: 2;
 }
 
-.board .chip {
-  fill: #fff;
-  stroke: #444;
-  stroke-width: 1.5;
+.board .count circle {
+  fill: var(--ink);
+  stroke: var(--gold);
+  stroke-width: 1.2;
 }
 
-.board .chip.golden {
-  fill: var(--gold);
-}
-
-.board .chip-count,
-.board .piece-label,
-.board .wraith-label {
-  font-size: 11px;
-  font-weight: bold;
+.board .count text {
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--text);
   text-anchor: middle;
-  pointer-events: none;
-}
-
-.board .piece-label,
-.board .wraith-label {
-  fill: #fff;
-}
-
-.board .wraith {
-  fill: #5b2a86;
-  stroke: #2d1245;
-  stroke-width: 1.5;
 }
 
 .board .piece {
-  stroke: #fff;
-  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.board .piece-label {
+  font-size: 12px;
+  font-weight: 800;
+  fill: #fff;
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #0008;
+  stroke-width: 2px;
 }
 
 .board .preview {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--gold);
   stroke-width: 3;
   stroke-dasharray: 6 4;
 }
 
 .board .preview.contact {
-  stroke: var(--ng);
+  stroke: var(--danger);
 }
 
 .board .edge-hit {
@@ -248,15 +340,15 @@ button.selectable,
 }
 
 .board .edge-hit.place {
-  fill: #2a9d4b66;
+  fill: #e6c35c80;
 }
 
 .board .edge-hit.remove {
-  fill: #c6282877;
+  fill: #e0604f99;
 }
 
 .board .edge-hit.disabled {
-  fill: #00000010;
+  fill: #ffffff12;
 }
 
 .legend {
@@ -268,9 +360,9 @@ button.selectable,
 .message {
   margin: 0;
   padding: 8px 12px;
-  border-radius: 8px;
-  background: #fff4e5;
-  border: 1px solid #f0c27b;
+  border-radius: 6px;
+  background: #3a3018;
+  border: 1px solid var(--gold);
 }
 
 .controls {
@@ -283,6 +375,7 @@ button.selectable,
   flex: 1 1 140px;
 }
 
+/* 手札 */
 .hand {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -290,46 +383,47 @@ button.selectable,
 }
 
 .card {
-  min-height: 72px;
-  flex-direction: column;
-  padding: 4px;
+  padding: 3px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: transparent;
+  min-height: 44px;
+}
+
+.card-face {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 2px 2px #0007);
+}
+
+.card.selectable {
+  border-color: var(--gold-soft);
+}
+
+.card.selectable:hover {
+  border-color: var(--gold);
 }
 
 .card.disabled {
-  opacity: 0.55;
+  opacity: 0.45;
+  filter: grayscale(0.6);
 }
 
 .card.previewing {
-  border-color: var(--ng);
-  border-width: 3px;
-}
-
-.card.kind-ghost {
-  background: #f3edfb;
-}
-
-.card.kind-barrier {
-  background: #ececec;
-}
-
-.card-title {
-  font-size: 1.3rem;
-  font-weight: bold;
-}
-
-.card-kind {
-  font-size: 0.7rem;
-  color: var(--muted);
+  border-color: var(--gold);
+  background: var(--gold-soft);
 }
 
 .preview-text {
   margin: 0;
   font-size: 0.9rem;
+  color: var(--gold);
 }
 
 .fallback {
-  border: 2px dashed var(--ng);
-  border-radius: 8px;
+  border: 2px dashed var(--danger);
+  border-radius: 6px;
   padding: 8px;
   display: grid;
   gap: 6px;
@@ -339,10 +433,11 @@ button.selectable,
   overflow-wrap: anywhere;
 }
 
+/* 情報欄と出来事 */
 .info,
 .log {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--panel-edge);
   border-radius: 8px;
   padding: 10px;
 }
@@ -365,7 +460,8 @@ button.selectable,
 }
 
 .seat.current {
-  background: #f1ecfa;
+  background: #2f2a1c;
+  box-shadow: inset 3px 0 0 var(--gold);
 }
 
 .seat-name {
@@ -373,6 +469,7 @@ button.selectable,
   align-items: center;
   gap: 6px;
   font-weight: bold;
+  font-family: var(--serif);
 }
 
 .dot {
@@ -380,11 +477,16 @@ button.selectable,
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--text);
 }
 
 .turn-mark {
   font-size: 0.75rem;
-  color: var(--accent);
+  color: var(--gold);
+}
+
+.score {
+  font-variant-numeric: tabular-nums;
 }
 
 .held {
@@ -401,7 +503,7 @@ span.held-chip {
 }
 
 .held-chip.golden {
-  background: #fff6cc;
+  color: #f2d16b;
 }
 
 .hand-count {
@@ -417,7 +519,7 @@ span.held-chip {
 
 .log ol {
   margin: 0;
-  padding-left: 1.2em;
+  padding-left: 1.4em;
   font-size: 0.85rem;
 }
 
@@ -426,11 +528,20 @@ span.held-chip {
   max-width: 520px;
   margin: 0 auto;
   padding: 24px 16px;
+  text-align: center;
+}
+
+.result-art {
+  width: 120px;
+  height: 120px;
 }
 
 .scores {
   list-style: none;
   padding: 0;
+  display: inline-grid;
+  gap: 4px;
+  text-align: left;
 }
 
 .scores li {

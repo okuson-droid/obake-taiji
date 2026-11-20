@@ -5,8 +5,11 @@ import type { MoveCardId, Seat } from '../game/types.ts';
 /** 席の表示名（内部は 0 始まり、表示は 1 始まり） */
 export const seatName = (seat: Seat | number): string => `席 ${seat + 1}`;
 
-/** 席ごとの駒の色。白地の上で見分けやすい 4 色とする。 */
-export const SEAT_COLORS: readonly string[] = ['#d1495b', '#2e6fd8', '#2a9d4b', '#c97a00'];
+/**
+ * 席ごとのマントの色。深緑の盤の上で見分けやすく、色相だけでなく明るさも変えた 4 色とする
+ * （暗い赤・明るい青・中間の紫・明るい橙）。駒には席番号も書く。
+ */
+export const SEAT_COLORS: readonly string[] = ['#c8443a', '#6aa6ff', '#9b6bd6', '#f0a23c'];
 
 export const seatColor = (seat: Seat | number): string => SEAT_COLORS[seat] ?? '#555';
 

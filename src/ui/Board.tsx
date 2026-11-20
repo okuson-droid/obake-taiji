@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { COLS, EDGES, ROWS, START_CELLS } from '../data/board.ts';
 import type { Target } from '../game/targets.ts';
 import type { Cell, Chip, ChipKind, Dir, EdgeId, GameState, OptionId } from '../game/types.ts';
+import { FACING_ANGLE } from './assets/art.tsx';
 import { seatColor, seatName } from './labels.ts';
 
 /** 見出しの幅と部屋の大きさ（viewBox の単位）。375px 幅で 1 単位がおよそ 0.92px になる。 */
@@ -30,9 +31,14 @@ const cellPos = (cell: Cell): { x: number; y: number } => ({
   y: HEAD + ROWS.indexOf(Number(cell.slice(1)) as (typeof ROWS)[number]) * SIZE,
 });
 
-const DIR_VECTOR: Readonly<Record<Dir, [number, number]>> = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
+/**
+ * 部屋の中の置き場所（部屋は 60×60）。左に人間駒か怨霊（同じ部屋にはいない）、右の列にお化けを置き、
+ * タップできるお化けと怨霊の当たり判定が重ならないようにする。
+ * 駒は 1 人なら左の中ほど、複数なら四隅に置く（design.md §8）。
+ */
+const LEFT_SLOT: [number, number] = [22, 30];
+const CHIP_SLOT: Readonly<Record<ChipKind, [number, number]>> = { golden: [45, 17], normal: [45, 43] };
 
-/** 同じ部屋にいる駒の置き場所。1 人なら中央、複数なら四隅（design.md §8）。 */
 const CORNERS: readonly [number, number][] = [
   [14, 14],
   [46, 14],
@@ -70,11 +76,13 @@ export const Board = (p: BoardProps) => {
       const { x, y } = cellPos(cell);
       const owner = startOwner.get(cell);
       const isStart = START_CELLS.includes(cell);
+      const dark = (COLS.indexOf(col) + ROWS.indexOf(row)) % 2 === 1;
       cells.push(
         <g key={cell}>
-          <rect x={x} y={y} width={SIZE} height={SIZE} className={isStart ? 'cell start' : 'cell'} style={owner !== undefined ? { fill: `${seatColor(owner)}22` } : undefined} />
+          <rect x={x} y={y} width={SIZE} height={SIZE} className={`cell${dark ? ' dark' : ''}${isStart ? ' start' : ''}`} />
+          {owner !== undefined && <rect x={x} y={y} width={SIZE} height={SIZE} fill={seatColor(owner)} opacity={0.22} />}
           {isStart && (
-            <text x={x + SIZE / 2} y={y + SIZE / 2 + 4} className="start-label">
+            <text x={x + 5} y={y + SIZE - 5} className="start-label">
               {owner !== undefined ? `S${owner + 1}` : 'S'}
             </text>
           )}
@@ -87,10 +95,19 @@ export const Board = (p: BoardProps) => {
     const e = EDGES.find((d) => d.id === edge);
     if (e === undefined) return null;
     const { x, y } = cellPos(e.cells[0]);
+    // 通せん棒は板を打ち付けた柵として描く（案 C）。
     return edge.startsWith('E:') ? (
-      <line key={edge} x1={x + SIZE} y1={y + 2} x2={x + SIZE} y2={y + SIZE - 2} className="barrier" />
+      <g key={edge} className="barrier">
+        <rect x={x + SIZE - 4} y={y + 3} width={8} height={SIZE - 6} rx={1.5} />
+        <circle cx={x + SIZE} cy={y + 14} r={1.4} className="nail" />
+        <circle cx={x + SIZE} cy={y + SIZE - 14} r={1.4} className="nail" />
+      </g>
     ) : (
-      <line key={edge} x1={x + 2} y1={y + SIZE} x2={x + SIZE - 2} y2={y + SIZE} className="barrier" />
+      <g key={edge} className="barrier">
+        <rect x={x + 3} y={y + SIZE - 4} width={SIZE - 6} height={8} rx={1.5} />
+        <circle cx={x + 14} cy={y + SIZE} r={1.4} className="nail" />
+        <circle cx={x + SIZE - 14} cy={y + SIZE} r={1.4} className="nail" />
+      </g>
     );
   });
 
@@ -98,19 +115,25 @@ export const Board = (p: BoardProps) => {
     const first = chips[0]!;
     const kind: ChipKind = first.kind;
     const { x, y } = cellPos(first.cell);
-    const cx = x + SIZE / 2;
-    const cy = kind === 'golden' ? y + 13 : y + SIZE - 13;
+    // ゴールデンは右上、通常は右下に置く。
+    const cx = x + CHIP_SLOT[kind][0];
+    const cy = y + CHIP_SLOT[kind][1];
     const option: OptionId = `ghost:${first.id}`;
     const legal = p.options.has(option);
     const also = legal ? chips.slice(1).map((c): OptionId => `ghost:${c.id}`).filter((o) => p.options.has(o)) : [];
     const target: Target = { type: 'chip', chip: first.id };
     return (
       <g key={key} {...tapProps(legal ? option : null, target, p, 'chip', also)} aria-label={`${first.cell} の${kind === 'golden' ? 'ゴールデンお化け' : 'お化け'} ${chips.length} 匹`}>
-        <circle cx={cx} cy={cy} r={13} className="hit" />
-        <circle cx={cx} cy={cy} r={10} className={kind === 'golden' ? 'chip golden' : 'chip'} />
-        <text x={cx} y={cy + 4} className="chip-count">
-          {chips.length}
-        </text>
+        <circle cx={cx} cy={cy} r={12.5} className="hit" />
+        <use href={kind === 'golden' ? '#art-chip-golden' : '#art-chip-normal'} x={cx - 12} y={cy - 12} width={24} height={24} className="float" />
+        {chips.length > 1 && (
+          <g className="count">
+            <circle cx={cx + 8} cy={cy - 9} r={6.5} />
+            <text x={cx + 8} y={cy - 5.8}>
+              {chips.length}
+            </text>
+          </g>
+        )}
       </g>
     );
   });
@@ -119,14 +142,8 @@ export const Board = (p: BoardProps) => {
   const wraithLegal = p.options.has('ghost:wraith');
   const wraith = (
     <g {...tapProps(wraithLegal ? 'ghost:wraith' : null, { type: 'wraith' }, p, 'wraith')} aria-label={`怨霊 ${state.wraith}`}>
-      <circle cx={wraithPos.x + SIZE / 2} cy={wraithPos.y + SIZE / 2} r={15} className="hit" />
-      <path
-        d={`M ${wraithPos.x + 30} ${wraithPos.y + 17} L ${wraithPos.x + 43} ${wraithPos.y + 30} L ${wraithPos.x + 30} ${wraithPos.y + 43} L ${wraithPos.x + 17} ${wraithPos.y + 30} Z`}
-        className="wraith"
-      />
-      <text x={wraithPos.x + 30} y={wraithPos.y + 34} className="wraith-label">
-        怨
-      </text>
+      <circle cx={wraithPos.x + LEFT_SLOT[0]} cy={wraithPos.y + LEFT_SLOT[1]} r={15} className="hit" />
+      <use href="#art-wraith" x={wraithPos.x + LEFT_SLOT[0] - 18} y={wraithPos.y + LEFT_SLOT[1] - 18} width={36} height={36} className="float slow" />
     </g>
   );
 
@@ -135,15 +152,27 @@ export const Board = (p: BoardProps) => {
   const pieces = state.players.map((pl) => {
     const { x, y } = cellPos(pl.pos);
     const together = byCell.get(pl.pos) ?? [];
-    const [ox, oy] = together.length > 1 ? (CORNERS[pl.seat] ?? [30, 30]) : [30, 30];
+    const [ox, oy] = together.length > 1 ? (CORNERS[pl.seat] ?? LEFT_SLOT) : LEFT_SLOT;
     const cx = x + ox;
     const cy = y + oy;
-    const [dx, dy] = DIR_VECTOR[pl.facing];
+    const size = together.length > 1 ? 28 : 44;
+    // 席番号はマントの中心に置く。マントの中心は絵の中心から 0.10×size だけ後ろにずれており、回転に合わせて動かす。
+    const rad = (FACING_ANGLE[pl.facing] * Math.PI) / 180;
+    const lx = cx - size * 0.1 * Math.cos(rad);
+    const ly = cy - size * 0.1 * Math.sin(rad);
+    // 人間駒は東向きの絵を、向きに合わせて回す。燭台の灯が向きを示す（rules v0.1 §2.4）。
     return (
-      <g key={pl.seat} aria-label={`${seatName(pl.seat)}の駒 ${pl.pos}`} data-testid={`piece-${pl.seat + 1}`}>
-        <line x1={cx} y1={cy} x2={cx + dx * 15} y2={cy + dy * 15} stroke={seatColor(pl.seat)} strokeWidth={4} strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r={9} fill={seatColor(pl.seat)} className="piece" />
-        <text x={cx} y={cy + 4} className="piece-label">
+      <g key={pl.seat} aria-label={`${seatName(pl.seat)}の駒 ${pl.pos}`} data-testid={`piece-${pl.seat + 1}`} className="piece">
+        <use
+          href="#art-player"
+          x={cx - size / 2}
+          y={cy - size / 2}
+          width={size}
+          height={size}
+          color={seatColor(pl.seat)}
+          transform={`rotate(${FACING_ANGLE[pl.facing]} ${cx} ${cy})`}
+        />
+        <text x={lx} y={ly + 4.5} className="piece-label">
           {pl.seat + 1}
         </text>
       </g>
@@ -196,9 +225,10 @@ export const Board = (p: BoardProps) => {
       {cells}
       {previewMark}
       {barriers}
-      {chipTokens}
-      {wraith}
+      {/* 駒はタップしないので下に置き、タップするお化けと怨霊を上に描く。 */}
       {pieces}
+      {wraith}
+      {chipTokens}
       {edgeHits}
     </svg>
   );

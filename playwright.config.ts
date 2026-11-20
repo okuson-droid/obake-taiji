@@ -12,6 +12,8 @@ export default defineConfig({
     trace: 'off',
     // 1 回の操作が止まったときに、局全体の上限まで待たずに失敗させる。
     actionTimeout: 15 * 1000,
+    // お化けの揺れ（CSS のアニメーション）を止める。揺れる要素は Playwright が「止まるまで」待つため。
+    reducedMotion: 'reduce',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

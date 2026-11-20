@@ -8,10 +8,11 @@ import { deckCounts, previewHumanMove, scoreOf } from '../game/queries.ts';
 import { targetOf, type Target } from '../game/targets.ts';
 import type { GameConfig, GameState, MoveCardId, OptionId, Seat } from '../game/types.ts';
 import { maskEvents } from '../game/visibility.ts';
+import { CardFace } from './assets/art.tsx';
 import { Board, type BoardPreview } from './Board.tsx';
 import { eventText } from './eventText.ts';
 import { GESTURES, areaOf, type Area } from './gestures.ts';
-import { cardFullName, cardLabel, seatColor, seatName } from './labels.ts';
+import { cardFullName, seatColor, seatName } from './labels.ts';
 import { allEvents, canUndo, choose, currentState, startSession, undo, type Session } from './session.ts';
 
 /** 出来事のログに表示する件数。古い順に並べ、末尾が最新である。 */
@@ -58,6 +59,9 @@ export const LocalGame = ({ players, seed }: { players: GameConfig['players']; s
     return (
       <main className="blind">
         <button type="button" className="blind-button" data-testid="blind-reveal" onClick={() => setRevealedFor(viewer)} style={{ borderColor: seatColor(viewer) }}>
+          <svg className="blind-art" viewBox="0 0 100 100" aria-hidden="true">
+            <use href="#art-player" x={0} y={0} width={100} height={100} color={seatColor(viewer)} transform="rotate(270 50 50)" />
+          </svg>
           <span className="blind-seat" style={{ color: seatColor(viewer) }}>
             {seatName(viewer)} の番です。
           </span>
@@ -181,7 +185,7 @@ const GameScreen = (p: GameScreenProps) => {
           onChoose={p.act}
           onExplain={p.showExplain}
         />
-        <p className="legend">白丸＝お化け（1 点）、金丸＝ゴールデン（3 点）、数字は匹数。紫＝怨霊。S＝スタート地点。</p>
+        <p className="legend">白いシーツ＝お化け（1 点）、金のシーツ＝ゴールデン（3 点）、丸の数字は匹数。頭巾＝怨霊。駒の燭台の灯が向き。S＝スタート地点。</p>
         {p.message !== null && (
           <p className="message" role="status" data-testid="explain-message">
             {p.message}
@@ -192,7 +196,6 @@ const GameScreen = (p: GameScreenProps) => {
           {state.players[viewer]!.hand.map((card) => {
             const option: OptionId = `play:${card}`;
             const legal = area('hand').has(option);
-            const label = cardLabel(card);
             const human = MOVE_CARD_BY_ID[card]?.type === 'human';
             return (
               <button
@@ -202,13 +205,13 @@ const GameScreen = (p: GameScreenProps) => {
                 data-testid="hand-card"
                 {...(legal ? { 'data-option': option } : {})}
                 aria-disabled={!legal}
+                aria-label={cardFullName(card)}
                 onPointerEnter={(e) => {
                   if (e.pointerType === 'mouse' && legal && human) p.setPreview(card);
                 }}
                 onClick={() => handleCard(card)}
               >
-                <span className="card-title">{label.title}</span>
-                <span className="card-kind">{label.kind}</span>
+                <CardFace card={card} />
               </button>
             );
           })}
@@ -334,6 +337,9 @@ const Result = ({ state }: { state: GameState }) => {
   const reason = r.reason === 'score' ? '10 点に到達しました' : 'お化けカードの山札が尽きました';
   return (
     <main className="result" data-testid="game-result">
+      <svg className="result-art" viewBox="0 0 100 100" aria-hidden="true">
+        <use href={r.reason === 'score' ? '#art-chip-golden' : '#art-chip-normal'} x={0} y={0} width={100} height={100} className="float" />
+      </svg>
       <h1>{head}</h1>
       <p>{reason}</p>
       <ol className="scores">
