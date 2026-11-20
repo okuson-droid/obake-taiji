@@ -28,10 +28,10 @@ const PROMPTS: Readonly<Record<NonNullable<GameState['pending']>['kind'], string
 };
 
 /** 端末が動きを減らす設定なら、演出を省く。 */
-const prefersReducedMotion = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+export const prefersReducedMotion = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 /** 再生中の演出。viewer は演出を見ている人（選択をした人）である。 */
-type Playing = { plan: AnimationPlan; viewer: Seat; id: number };
+export type Playing = { plan: AnimationPlan; viewer: Seat; id: number };
 
 /** 安全網の数を 1 つの局面について 1 回だけ数えるための鍵 */
 const stateKey = (s: Session): string => `${s.checkpoint.turnNo}:${s.checkpoint.rng}:${s.moves.join(',')}`;
@@ -121,7 +121,7 @@ const NO_OPTIONS: ReadonlyMap<OptionId, Target> = new Map();
 const noop = () => {};
 
 /** 演出を見せる画面。盤面は選択後の局面で描き、手札は出さない。タップで飛ばせる。 */
-const Watching = (p: { session: Session; state: GameState; playing: Playing; onSkip: () => void }) => {
+export const Watching = (p: { session: Session; state: GameState; playing: Playing; onSkip: () => void }) => {
   const events = maskEvents(allEvents(p.session), p.playing.viewer)
     .map(eventText)
     .filter((t): t is string => t !== null)
@@ -155,8 +155,10 @@ const Watching = (p: { session: Session; state: GameState; playing: Playing; onS
   );
 };
 
-type GameScreenProps = {
+export type GameScreenProps = {
   session: Session;
+  /** 画面の持ち主が選べる番か。省略時は真（ローカル対戦では viewer が常に選択待ちのプレイヤーである）。 */
+  active?: boolean;
   state: GameState;
   viewer: Seat;
   message: string | null;
@@ -168,10 +170,12 @@ type GameScreenProps = {
   onUndo: () => void;
 };
 
-const GameScreen = (p: GameScreenProps) => {
+export const GameScreen = (p: GameScreenProps) => {
   const { state, viewer } = p;
   const pending = state.pending!;
-  const options = getOptions(state);
+  // オンライン対戦では、自分の席の選択待ちでないときは選択肢を出さない（design.md §7.3）。
+  const active = p.active ?? true;
+  const options = active ? getOptions(state) : [];
   // 合法手を所作の対応表（gestures.ts）で領域ごとに振り分ける。
   const byArea = new Map<Area, Map<OptionId, Target>>();
   for (const o of options) {
@@ -237,8 +241,8 @@ const GameScreen = (p: GameScreenProps) => {
             {seatName(viewer)}
           </span>
           <span className="prompt" data-testid="prompt">
-            {PROMPTS[pending.kind]}
-            {pendingCard !== null && <>（{cardFullName(pendingCard)}）</>}
+            {active ? PROMPTS[pending.kind] : `${seatName(pending.player)} が選んでいます。お待ちください`}
+            {active && pendingCard !== null && <>（{cardFullName(pendingCard)}）</>}
           </span>
         </header>
         <Board
@@ -255,7 +259,7 @@ const GameScreen = (p: GameScreenProps) => {
             {p.message}
           </p>
         )}
-        <Controls options={area('controls')} act={p.act} canUndo={canUndo(p.session)} onUndo={p.onUndo} />
+        <Controls options={area('controls')} act={p.act} canUndo={active && canUndo(p.session)} onUndo={p.onUndo} />
         <section className="hand" aria-label="手札" data-testid="hand">
           {state.players[viewer]!.hand.map((card) => {
             const option: OptionId = `play:${card}`;
@@ -392,7 +396,7 @@ const InfoPanel = (p: {
   );
 };
 
-const Result = ({ state }: { state: GameState }) => {
+export const Result = ({ state, children }: { state: GameState; children?: ReactNode }) => {
   const r = state.result!;
   const head =
     r.winners.length === 1
@@ -414,6 +418,7 @@ const Result = ({ state }: { state: GameState }) => {
           </li>
         ))}
       </ol>
+      {children}
       <a className="action" href="#/" data-testid="back-to-top">
         トップへ戻る
       </a>

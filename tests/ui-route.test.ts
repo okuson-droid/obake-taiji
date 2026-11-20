@@ -15,7 +15,8 @@ describe('経路（design §7.5）', () => {
   test('範囲外の人数や解釈できない経路はトップとして扱う', () => {
     expect(parseRoute('#/local/1')).toEqual({ name: 'top' });
     expect(parseRoute('#/local/5')).toEqual({ name: 'top' });
-    expect(parseRoute('#/room/ABC123')).toEqual({ name: 'top' });
+    expect(parseRoute('#/room/abc123')).toEqual({ name: 'top' });
+    expect(parseRoute('#/room/ABC12')).toEqual({ name: 'top' });
   });
 
   test('D-17 ?seed=<数> でシードを指定できる（ハッシュ内のクエリを優先する）', () => {
@@ -34,5 +35,12 @@ describe('経路（design §7.5）', () => {
   test('localHash は parseRoute で読み戻せる', () => {
     expect(parseRoute(localHash(4, 99))).toEqual({ name: 'local', players: 4, seed: 99 });
     expect(parseRoute(localHash(2))).toEqual({ name: 'local', players: 2, seed: null });
+  });
+});
+
+describe('オンライン対戦の経路（design §7.5）', () => {
+  test('#/room/<部屋コード> はオンライン対戦（英大文字と数字の 6 桁）', () => {
+    expect(parseRoute('#/room/ABC123')).toEqual({ name: 'room', code: 'ABC123' });
+    expect(parseRoute('#/room/ZZ9Z00?db=fake')).toEqual({ name: 'room', code: 'ZZ9Z00' });
   });
 });
