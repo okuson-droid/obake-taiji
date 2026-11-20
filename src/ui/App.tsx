@@ -1,5 +1,6 @@
 // 画面の切り替え（design.md §7.5）。ハッシュの経路に応じてトップかローカル対戦を出す。
 import { useEffect, useState } from 'react';
+import { ArtDefs } from './assets/art.tsx';
 import { LocalGame } from './LocalGame.tsx';
 import { Top } from './Top.tsx';
 import { localHash, parseRoute, randomSeed } from './route.ts';
@@ -23,9 +24,15 @@ export const App = () => {
     }
   }, [route]);
 
+  // 駒の絵の定義（ArtDefs）はどの画面でも 1 回だけ置く。
+  let screen = <Top />;
   if (route.name === 'local') {
-    if (route.seed === null) return null;
-    return <LocalGame key={`${route.players}:${route.seed}`} players={route.players} seed={route.seed} />;
+    screen = route.seed === null ? <></> : <LocalGame key={`${route.players}:${route.seed}`} players={route.players} seed={route.seed} />;
   }
-  return <Top />;
+  return (
+    <>
+      <ArtDefs />
+      {screen}
+    </>
+  );
 };
