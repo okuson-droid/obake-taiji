@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { COLS, EDGES, ROWS, START_CELLS } from '../data/board.ts';
 import type { Target } from '../game/targets.ts';
 import type { Cell, Chip, ChipKind, Dir, EdgeId, GameState, OptionId } from '../game/types.ts';
-import { FACING_ANGLE } from './assets/art.tsx';
+import { PLAYER_POSE } from './assets/art.tsx';
 import { seatColor, seatName } from './labels.ts';
 
 /** 見出しの幅と部屋の大きさ（viewBox の単位）。375px 幅で 1 単位がおよそ 0.92px になる。 */
@@ -82,7 +82,7 @@ export const Board = (p: BoardProps) => {
           <rect x={x} y={y} width={SIZE} height={SIZE} className={`cell${dark ? ' dark' : ''}${isStart ? ' start' : ''}`} />
           {owner !== undefined && <rect x={x} y={y} width={SIZE} height={SIZE} fill={seatColor(owner)} opacity={0.22} />}
           {isStart && (
-            <text x={x + 5} y={y + SIZE - 5} className="start-label">
+            <text x={x + 3} y={y + 9} className="start-label">
               {owner !== undefined ? `S${owner + 1}` : 'S'}
             </text>
           )}
@@ -156,23 +156,22 @@ export const Board = (p: BoardProps) => {
     const cx = x + ox;
     const cy = y + oy;
     const size = together.length > 1 ? 28 : 44;
-    // 席番号はマントの中心に置く。マントの中心は絵の中心から 0.10×size だけ後ろにずれており、回転に合わせて動かす。
-    const rad = (FACING_ANGLE[pl.facing] * Math.PI) / 180;
-    const lx = cx - size * 0.1 * Math.cos(rad);
-    const ly = cy - size * 0.1 * Math.sin(rad);
-    // 人間駒は東向きの絵を、向きに合わせて回す。燭台の灯が向きを示す（rules v0.1 §2.4）。
+    const pose = PLAYER_POSE[pl.facing];
+    // 人間駒は向きに合わせた姿勢の絵を使う。燭台と灯のある側が向きである（rules v0.1 §2.4）。
+    // 席番号は足もとの左（絵の中心から左へ 0.3×size、下へ 0.32×size）に置き、燭台や顔を隠さない。
     return (
       <g key={pl.seat} aria-label={`${seatName(pl.seat)}の駒 ${pl.pos}`} data-testid={`piece-${pl.seat + 1}`} className="piece">
         <use
-          href="#art-player"
+          href={pose.href}
           x={cx - size / 2}
           y={cy - size / 2}
           width={size}
           height={size}
           color={seatColor(pl.seat)}
-          transform={`rotate(${FACING_ANGLE[pl.facing]} ${cx} ${cy})`}
+          transform={pose.mirror ? `translate(${2 * cx} 0) scale(-1 1)` : undefined}
         />
-        <text x={lx} y={ly + 4.5} className="piece-label">
+        <circle cx={cx - size * 0.3} cy={cy + size * 0.32} r={size * 0.13} className="piece-badge" />
+        <text x={cx - size * 0.3} y={cy + size * 0.32 + size * 0.075} className="piece-label" style={{ fontSize: size * 0.2 }}>
           {pl.seat + 1}
         </text>
       </g>

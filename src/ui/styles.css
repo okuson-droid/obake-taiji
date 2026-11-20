@@ -313,8 +313,14 @@ button.selectable,
   pointer-events: none;
 }
 
+.board .piece-badge {
+  fill: #0009;
+  stroke: var(--text);
+  stroke-width: 0.8;
+}
+
 .board .piece-label {
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 800;
   fill: #fff;
   text-anchor: middle;

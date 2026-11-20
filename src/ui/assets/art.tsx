@@ -28,6 +28,8 @@ export const ART = {
   barrierPaper: '#ece5d3',
   plank: '#8a6a3e',
   rose: '#b9ab88',
+  skin: '#f1d2b0',
+  hair: '#4a3424',
 } as const;
 
 /** 駒の絵の定義。画面に 1 回だけ置き、盤面やカードから <use> で参照する。 */
@@ -72,23 +74,70 @@ export const ArtDefs = () => (
         <ellipse cx={56.5} cy={41} rx={4} ry={2.8} fill={ART.eye} />
         <path d="M 24 68 q 8 6 17 0 q 9 -6 18 0 q 8 6 17 0" stroke={ART.chain} strokeWidth={3.5} fill="none" strokeDasharray="5 3" />
       </symbol>
-      {/* 人間駒（rules v0.1 §2.4）：上から見た探索者。東向きで描き、向きに応じて回す。
-          マントの色は currentColor（席の色）。燭台の灯が向きを示す。 */}
-      <symbol id="art-player" viewBox="0 0 100 100">
-        <circle cx={86} cy={50} r={14} fill={ART.glow} opacity={0.45} />
-        <circle cx={40} cy={50} r={32} fill="currentColor" stroke={ART.parchment} strokeWidth={4} />
-        <circle cx={40} cy={50} r={18} fill="#000" opacity={0.3} />
-        <circle cx={40} cy={50} r={18} fill="none" stroke={ART.parchment} strokeWidth={2} opacity={0.7} />
-        <path d="M 72 50 h 9" stroke={ART.parchment} strokeWidth={4.5} strokeLinecap="round" />
-        <rect x={80} y={43} width={9} height={14} rx={1.5} fill={ART.candle} stroke={ART.ink} strokeWidth={1.8} />
-        <path d="M 84.5 43 q -3 -6 0 -10 q 3 4 0 10 z" fill={ART.flame} />
+      {/* 人間駒（rules v0.1 §2.4）：帽子とコートの探索者の立ち姿。コートと帽子の帯は currentColor（席の色）。
+          向きは姿勢で示す。南は正面（顔が見える）、北は背中（燭台を頭上に掲げる）、
+          東は横顔（燭台を進む方へ差し出す）。西は東の絵を左右反転して使う。 */}
+      <symbol id="art-player-front" viewBox="0 0 100 100">
+        <ellipse cx={50} cy={90} rx={22} ry={7} fill={ART.glow} opacity={0.5} />
+        <path d="M 42 80 v 11 M 58 80 v 11" stroke={ART.ink} strokeWidth={6} strokeLinecap="round" />
+        <path d="M 34 44 Q 50 36 66 44 L 70 82 L 30 82 Z" fill="currentColor" stroke={ART.ink} strokeWidth={2.5} strokeLinejoin="round" />
+        <path d="M 50 42 V 81" stroke={ART.ink} strokeWidth={1.5} opacity={0.5} />
+        <path d="M 36 48 Q 40 60 46 64 M 64 48 Q 60 60 54 64" stroke="currentColor" strokeWidth={7} fill="none" strokeLinecap="round" />
+        <path d="M 36 48 Q 40 60 46 64 M 64 48 Q 60 60 54 64" stroke={ART.ink} strokeWidth={1.5} fill="none" opacity={0.4} />
+        <rect x={46} y={56} width={8} height={11} rx={1.5} fill={ART.candle} stroke={ART.ink} strokeWidth={1.6} />
+        <path d="M 50 56 q -3 -6 0 -10 q 3 4 0 10 z" fill={ART.flame} />
+        <circle cx={46} cy={65} r={3} fill={ART.skin} /><circle cx={54} cy={65} r={3} fill={ART.skin} />
+        <circle cx={50} cy={30} r={11} fill={ART.skin} stroke={ART.ink} strokeWidth={2.2} />
+        <circle cx={46} cy={30} r={1.6} fill={ART.ink} /><circle cx={54} cy={30} r={1.6} fill={ART.ink} />
+        <path d="M 47 35 q 3 2 6 0" stroke={ART.ink} strokeWidth={1.4} fill="none" strokeLinecap="round" />
+        <ellipse cx={50} cy={21} rx={18} ry={4} fill={ART.ink} />
+        <rect x={41} y={8} width={18} height={13} rx={2} fill={ART.ink} />
+        <rect x={41} y={16} width={18} height={3.5} fill="currentColor" />
+      </symbol>
+      <symbol id="art-player-back" viewBox="0 0 100 100">
+        <ellipse cx={68} cy={9} rx={14} ry={8} fill={ART.glow} opacity={0.5} />
+        <path d="M 42 80 v 11 M 58 80 v 11" stroke={ART.ink} strokeWidth={6} strokeLinecap="round" />
+        <path d="M 34 44 Q 50 36 66 44 L 70 82 L 30 82 Z" fill="currentColor" stroke={ART.ink} strokeWidth={2.5} strokeLinejoin="round" />
+        <path d="M 40 50 Q 50 54 60 50" stroke={ART.ink} strokeWidth={1.5} fill="none" opacity={0.5} />
+        <path d="M 36 48 Q 34 62 38 70" stroke="currentColor" strokeWidth={7} fill="none" strokeLinecap="round" />
+        <path d="M 64 46 Q 70 32 68 20" stroke="currentColor" strokeWidth={7} fill="none" strokeLinecap="round" />
+        <circle cx={68} cy={19} r={3} fill={ART.skin} />
+        <rect x={64} y={6} width={8} height={11} rx={1.5} fill={ART.candle} stroke={ART.ink} strokeWidth={1.6} />
+        <path d="M 68 6 q -3 -5 0 -9 q 3 4 0 9 z" fill={ART.flame} />
+        <circle cx={50} cy={30} r={11} fill={ART.hair} stroke={ART.ink} strokeWidth={2.2} />
+        <ellipse cx={50} cy={21} rx={18} ry={4} fill={ART.ink} />
+        <rect x={41} y={8} width={18} height={13} rx={2} fill={ART.ink} />
+        <rect x={41} y={16} width={18} height={3.5} fill="currentColor" />
+      </symbol>
+      <symbol id="art-player-side" viewBox="0 0 100 100">
+        <circle cx={86} cy={40} r={13} fill={ART.glow} opacity={0.5} />
+        <path d="M 44 80 L 40 91 M 54 80 L 60 91" stroke={ART.ink} strokeWidth={6} strokeLinecap="round" />
+        <path d="M 38 44 Q 50 38 60 44 L 66 82 L 32 82 Z" fill="currentColor" stroke={ART.ink} strokeWidth={2.5} strokeLinejoin="round" />
+        <path d="M 40 50 Q 36 64 40 72" stroke={ART.ink} strokeWidth={1.5} fill="none" opacity={0.4} />
+        <path d="M 56 50 Q 66 52 76 45" stroke="currentColor" strokeWidth={7} fill="none" strokeLinecap="round" />
+        <path d="M 56 50 Q 66 52 76 45" stroke={ART.ink} strokeWidth={1.4} fill="none" opacity={0.4} />
+        <circle cx={78} cy={44} r={3} fill={ART.skin} />
+        <rect x={75} y={30} width={8} height={12} rx={1.5} fill={ART.candle} stroke={ART.ink} strokeWidth={1.6} />
+        <path d="M 79 30 q -3 -6 0 -10 q 3 4 0 10 z" fill={ART.flame} />
+        <circle cx={49} cy={30} r={11} fill={ART.skin} stroke={ART.ink} strokeWidth={2.2} />
+        <path d="M 38 28 a 11 11 0 0 1 8 -9 L 46 34 Q 40 34 38 28 Z" fill={ART.hair} />
+        <path d="M 59 29 l 4 3 -4 1" fill={ART.skin} stroke={ART.ink} strokeWidth={1.4} strokeLinejoin="round" />
+        <circle cx={55} cy={28} r={1.6} fill={ART.ink} />
+        <ellipse cx={50} cy={21} rx={18} ry={4} fill={ART.ink} />
+        <rect x={40} y={8} width={17} height={13} rx={2} fill={ART.ink} />
+        <rect x={40} y={16} width={17} height={3.5} fill="currentColor" />
       </symbol>
     </defs>
   </svg>
 );
 
-/** 人間駒の回転角（東向きの絵を基準とし、時計回りの度数） */
-export const FACING_ANGLE: Readonly<Record<Dir, number>> = { E: 0, S: 90, W: 180, N: 270 };
+/** 人間駒の向きごとの絵。西は東の横顔を左右反転する。 */
+export const PLAYER_POSE: Readonly<Record<Dir, { href: string; mirror: boolean }>> = {
+  S: { href: '#art-player-front', mirror: false },
+  N: { href: '#art-player-back', mirror: false },
+  E: { href: '#art-player-side', mirror: false },
+  W: { href: '#art-player-side', mirror: true },
+};
 
 const DIR_ANGLE: Readonly<Record<Dir, number>> = { N: 0, E: 90, S: 180, W: 270 };
 const DIR_NAME: Readonly<Record<Dir, string>> = { N: '北', E: '東', S: '南', W: '西' };

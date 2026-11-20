@@ -60,7 +60,7 @@ export const LocalGame = ({ players, seed }: { players: GameConfig['players']; s
       <main className="blind">
         <button type="button" className="blind-button" data-testid="blind-reveal" onClick={() => setRevealedFor(viewer)} style={{ borderColor: seatColor(viewer) }}>
           <svg className="blind-art" viewBox="0 0 100 100" aria-hidden="true">
-            <use href="#art-player" x={0} y={0} width={100} height={100} color={seatColor(viewer)} transform="rotate(270 50 50)" />
+            <use href="#art-player-front" x={0} y={0} width={100} height={100} color={seatColor(viewer)} />
           </svg>
           <span className="blind-seat" style={{ color: seatColor(viewer) }}>
             {seatName(viewer)} の番です。
