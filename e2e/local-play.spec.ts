@@ -84,3 +84,32 @@ test.describe('タッチ操作（U-02）', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('演出（カードを使った後の動き）', () => {
+  // この検査だけは動きを止めない。
+  test.use({ reducedMotion: 'no-preference', viewport: { width: 375, height: 812 } });
+
+  test('移動の演出の間は手札も選択肢も出さず、終わると次の人の目隠し画面になる。タップで飛ばせる', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto(appUrl('#/local/2?seed=101'));
+    await page.getByTestId('blind-reveal').click();
+
+    // 1 手目：人間移動カードを使う（マウスではホバーで予告し、クリックで決定する）。
+    await page.locator('[data-testid=hand-card].kind-human[data-option]').first().click();
+    await expect(page.getByTestId('watching')).toBeVisible();
+    expect(await page.locator('[data-option]').count()).toBe(0);
+    expect(await page.getByTestId('hand-card').count()).toBe(0);
+    expect(await page.locator('[data-seat="0"]').evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0);
+    // 演出が終わると、席 2 の目隠し画面になる。
+    await expect(page.getByTestId('watching')).toHaveCount(0, { timeout: 5000 });
+    await expect(page.getByTestId('blind-reveal')).toHaveText(/席 2 の番です。/);
+
+    // 2 手目：演出を「タップで飛ばす」。
+    await page.getByTestId('blind-reveal').click();
+    await page.locator('[data-testid=hand-card].kind-human[data-option]').first().click();
+    await expect(page.getByTestId('watching')).toBeVisible();
+    await page.getByTestId('skip-animation').click();
+    await expect(page.getByTestId('blind-reveal')).toHaveText(/席 1 の番です。/, { timeout: 1000 });
+    expect(errors).toEqual([]);
+  });
+});

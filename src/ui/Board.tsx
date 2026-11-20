@@ -1,16 +1,14 @@
 // 盤面（design.md §8）。6×6 の部屋、駒、お化け、怨霊、通せん棒を SVG で描く。
 // 選べるかどうかは親から渡される合法手（getOptions・targetOf の結果）だけで決め、ルールを計算しない。
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { COLS, EDGES, ROWS, START_CELLS } from '../data/board.ts';
 import type { Target } from '../game/targets.ts';
 import type { Cell, Chip, ChipKind, Dir, EdgeId, GameState, OptionId } from '../game/types.ts';
+import type { AnimTarget, AnimationPlan, Frame } from './animation.ts';
 import { PLAYER_POSE } from './assets/art.tsx';
+import { CHIP_SLOT, HEAD, LEFT_SLOT, SIZE, VIEW, cellPos, piecePlacement } from './boardGeometry.ts';
 import { seatColor, seatName } from './labels.ts';
 
-/** 見出しの幅と部屋の大きさ（viewBox の単位）。375px 幅で 1 単位がおよそ 0.92px になる。 */
-const HEAD = 20;
-const SIZE = 60;
-const VIEW = HEAD + SIZE * 6;
 /** 辺の当たり判定の幅。375px 幅でも 16px 以上になる（design.md §8）。 */
 const EDGE_HIT = 20;
 
@@ -24,27 +22,9 @@ export type BoardProps = {
   preview: BoardPreview | null;
   onChoose: (option: OptionId) => void;
   onExplain: (target: Target) => void;
+  /** 直前の選択で起きた出来事の演出。null なら演出しない。 */
+  plan?: AnimationPlan | null;
 };
-
-const cellPos = (cell: Cell): { x: number; y: number } => ({
-  x: HEAD + COLS.indexOf(cell[0] as (typeof COLS)[number]) * SIZE,
-  y: HEAD + ROWS.indexOf(Number(cell.slice(1)) as (typeof ROWS)[number]) * SIZE,
-});
-
-/**
- * 部屋の中の置き場所（部屋は 60×60）。左に人間駒か怨霊（同じ部屋にはいない）、右の列にお化けを置き、
- * タップできるお化けと怨霊の当たり判定が重ならないようにする。
- * 駒は 1 人なら左の中ほど、複数なら四隅に置く（design.md §8）。
- */
-const LEFT_SLOT: [number, number] = [22, 30];
-const CHIP_SLOT: Readonly<Record<ChipKind, [number, number]>> = { golden: [45, 17], normal: [45, 43] };
-
-const CORNERS: readonly [number, number][] = [
-  [14, 14],
-  [46, 14],
-  [46, 46],
-  [14, 46],
-];
 
 /** 選べる要素・選べない要素に共通の属性を付ける。 */
 const tapProps = (option: OptionId | null, target: Target, p: BoardProps, testId: string, also: OptionId[] = []) =>
@@ -58,8 +38,50 @@ const tapProps = (option: OptionId | null, target: Target, p: BoardProps, testId
       }
     : { 'data-testid': `${testId}-disabled`, onClick: () => p.onExplain(target), className: 'tap' };
 
+/** 演出の 1 コマを Web Animations のキーフレームにする。SVG の中では px は viewBox の単位である。 */
+const toKeyframe = (f: Frame): Keyframe => ({
+  transform: `translate(${f.dx}px, ${f.dy}px) scale(${f.scale})`,
+  opacity: f.opacity,
+  ...(f.offset === undefined ? {} : { offset: f.offset }),
+});
+
+/** 演出の対象の要素を盤面の中から探す。 */
+const findTarget = (svg: SVGSVGElement, t: AnimTarget): Element | null => {
+  switch (t.type) {
+    case 'piece':
+      return svg.querySelector(`[data-seat="${t.seat}"]`);
+    case 'wraith':
+      return svg.querySelector('[data-wraith]');
+    case 'barrier':
+      return svg.querySelector(`[data-edge="${t.edge}"]`);
+    case 'fx':
+      return svg.querySelector(`[data-fx="${t.id}"]`);
+    case 'chip':
+      return [...svg.querySelectorAll('[data-chips]')].find((el) => (el.getAttribute('data-chips') ?? '').split(' ').includes(t.chip)) ?? null;
+  }
+};
+
 export const Board = (p: BoardProps) => {
-  const { state } = p;
+  const { state, plan } = p;
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  // 演出の計画（animation.ts）を Web Animations で再生する。計画が替わるか消えたら、再生中の動きを止める。
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (svg === null || plan === null || plan === undefined) return;
+    const running: Animation[] = [];
+    for (const step of plan.steps) {
+      const el = findTarget(svg, step.target);
+      if (el === null) continue;
+      running.push(
+        el.animate(step.frames.map(toKeyframe), { delay: step.delay, duration: step.duration, easing: 'ease-in-out', fill: 'both' }),
+      );
+    }
+    return () => {
+      for (const a of running) a.cancel();
+    };
+  }, [plan]);
+
   const startOwner = new Map<Cell, number>(state.players.map((pl) => [pl.start, pl.seat]));
 
   // 部屋ごと・種類ごとにチップをまとめる。同じ部屋の同じ種類のお化けは区別できないため 1 つの印で表す。
@@ -97,13 +119,13 @@ export const Board = (p: BoardProps) => {
     const { x, y } = cellPos(e.cells[0]);
     // 通せん棒は板を打ち付けた柵として描く（案 C）。
     return edge.startsWith('E:') ? (
-      <g key={edge} className="barrier">
+      <g key={edge} className="barrier" data-edge={edge}>
         <rect x={x + SIZE - 4} y={y + 3} width={8} height={SIZE - 6} rx={1.5} />
         <circle cx={x + SIZE} cy={y + 14} r={1.4} className="nail" />
         <circle cx={x + SIZE} cy={y + SIZE - 14} r={1.4} className="nail" />
       </g>
     ) : (
-      <g key={edge} className="barrier">
+      <g key={edge} className="barrier" data-edge={edge}>
         <rect x={x + 3} y={y + SIZE - 4} width={SIZE - 6} height={8} rx={1.5} />
         <circle cx={x + 14} cy={y + SIZE} r={1.4} className="nail" />
         <circle cx={x + SIZE - 14} cy={y + SIZE} r={1.4} className="nail" />
@@ -123,7 +145,7 @@ export const Board = (p: BoardProps) => {
     const also = legal ? chips.slice(1).map((c): OptionId => `ghost:${c.id}`).filter((o) => p.options.has(o)) : [];
     const target: Target = { type: 'chip', chip: first.id };
     return (
-      <g key={key} {...tapProps(legal ? option : null, target, p, 'chip', also)} aria-label={`${first.cell} の${kind === 'golden' ? 'ゴールデンお化け' : 'お化け'} ${chips.length} 匹`}>
+      <g key={key} {...tapProps(legal ? option : null, target, p, 'chip', also)} data-chips={chips.map((c) => c.id).join(' ')} aria-label={`${first.cell} の${kind === 'golden' ? 'ゴールデンお化け' : 'お化け'} ${chips.length} 匹`}>
         <circle cx={cx} cy={cy} r={12.5} className="hit" />
         <use href={kind === 'golden' ? '#art-chip-golden' : '#art-chip-normal'} x={cx - 12} y={cy - 12} width={24} height={24} className="float" />
         {chips.length > 1 && (
@@ -141,26 +163,19 @@ export const Board = (p: BoardProps) => {
   const wraithPos = cellPos(state.wraith);
   const wraithLegal = p.options.has('ghost:wraith');
   const wraith = (
-    <g {...tapProps(wraithLegal ? 'ghost:wraith' : null, { type: 'wraith' }, p, 'wraith')} aria-label={`怨霊 ${state.wraith}`}>
+    <g {...tapProps(wraithLegal ? 'ghost:wraith' : null, { type: 'wraith' }, p, 'wraith')} data-wraith="" aria-label={`怨霊 ${state.wraith}`}>
       <circle cx={wraithPos.x + LEFT_SLOT[0]} cy={wraithPos.y + LEFT_SLOT[1]} r={15} className="hit" />
       <use href="#art-wraith" x={wraithPos.x + LEFT_SLOT[0] - 18} y={wraithPos.y + LEFT_SLOT[1] - 18} width={36} height={36} className="float slow" />
     </g>
   );
 
-  const byCell = new Map<Cell, number[]>();
-  for (const pl of state.players) byCell.set(pl.pos, [...(byCell.get(pl.pos) ?? []), pl.seat]);
   const pieces = state.players.map((pl) => {
-    const { x, y } = cellPos(pl.pos);
-    const together = byCell.get(pl.pos) ?? [];
-    const [ox, oy] = together.length > 1 ? (CORNERS[pl.seat] ?? LEFT_SLOT) : LEFT_SLOT;
-    const cx = x + ox;
-    const cy = y + oy;
-    const size = together.length > 1 ? 28 : 44;
+    const { x: cx, y: cy, size } = piecePlacement(state, pl.seat);
     const pose = PLAYER_POSE[pl.facing];
     // 人間駒は向きに合わせた姿勢の絵を使う。燭台と灯のある側が向きである（rules v0.1 §2.4）。
     // 席番号は足もとの左（絵の中心から左へ 0.3×size、下へ 0.32×size）に置き、燭台や顔を隠さない。
     return (
-      <g key={pl.seat} aria-label={`${seatName(pl.seat)}の駒 ${pl.pos}`} data-testid={`piece-${pl.seat + 1}`} className="piece">
+      <g key={pl.seat} aria-label={`${seatName(pl.seat)}の駒 ${pl.pos}`} data-testid={`piece-${pl.seat + 1}`} data-seat={pl.seat} className="piece">
         <use
           href={pose.href}
           x={cx - size / 2}
@@ -210,7 +225,7 @@ export const Board = (p: BoardProps) => {
     : null;
 
   return (
-    <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="board" role="img" aria-label="盤面" data-testid="board">
+    <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="board" role="img" aria-label="盤面" data-testid="board" ref={svgRef}>
       {COLS.map((c, i) => (
         <text key={c} x={HEAD + i * SIZE + SIZE / 2} y={14} className="head">
           {c}
@@ -228,7 +243,41 @@ export const Board = (p: BoardProps) => {
       {pieces}
       {wraith}
       {chipTokens}
+      {plan && <FxLayer plan={plan} />}
       {edgeHits}
     </svg>
   );
 };
+
+/** 演出のためだけの一時的な絵（獲得されるお化け、点数、接触の輪、外される通せん棒）。最初は見えない。 */
+const FxLayer = ({ plan }: { plan: AnimationPlan }) => (
+  <g className="fx-layer" aria-hidden="true">
+    {plan.overlays.map((o) => {
+      switch (o.kind) {
+        case 'sprite':
+          return (
+            <use
+              key={o.id}
+              data-fx={o.id}
+              href={o.chipKind === 'golden' ? '#art-chip-golden' : '#art-chip-normal'}
+              x={o.x - o.size / 2}
+              y={o.y - o.size / 2}
+              width={o.size}
+              height={o.size}
+              opacity={0}
+            />
+          );
+        case 'text':
+          return (
+            <text key={o.id} data-fx={o.id} x={o.x} y={o.y} className="fx-points" opacity={0}>
+              {o.text}
+            </text>
+          );
+        case 'ring':
+          return <circle key={o.id} data-fx={o.id} cx={o.x} cy={o.y} r={o.r} className="fx-ring" opacity={0} />;
+        case 'plank':
+          return <rect key={o.id} data-fx={o.id} x={o.x} y={o.y} width={o.width} height={o.height} rx={1.5} className="fx-plank" />;
+      }
+    })}
+  </g>
+);

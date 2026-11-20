@@ -556,3 +556,54 @@ span.held-chip {
   gap: 8px;
   padding: 4px 0;
 }
+
+/* ---- 演出（animation.ts の計画を Board.tsx が再生する） ---- */
+.board [data-chips],
+.board .barrier {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.board .fx-layer {
+  pointer-events: none;
+}
+
+.board .fx-points {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 800;
+  fill: #f2d16b;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--ink);
+  stroke-width: 3px;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.board .fx-ring {
+  fill: #e0604f33;
+  stroke: var(--danger);
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.board .fx-plank {
+  fill: var(--plank);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.board .fx-layer use {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.skip {
+  width: 100%;
+  color: var(--muted);
+  border-style: dashed;
+}
