@@ -30,7 +30,7 @@ describe('所作の対応表（design §8）', () => {
   });
 });
 
-describe('出来事の表示文（eventText.ts、rules v0.1 §3.4）', () => {
+describe('出来事の表示文（eventText.ts、rules v0.2 §3.4）', () => {
   test('すべての種類の出来事に文を返し、カード ID を含めない', () => {
     const pick = randomPicker(8);
     let s = createGame({ players: 4 }, 8);

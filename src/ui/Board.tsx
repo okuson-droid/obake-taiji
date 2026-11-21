@@ -172,7 +172,7 @@ export const Board = (p: BoardProps) => {
   const pieces = state.players.map((pl) => {
     const { x: cx, y: cy, size } = piecePlacement(state, pl.seat);
     const pose = PLAYER_POSE[pl.facing];
-    // 人間駒は向きに合わせた姿勢の絵を使う。燭台と灯のある側が向きである（rules v0.1 §2.4）。
+    // 人間駒は向きに合わせた姿勢の絵を使う。燭台と灯のある側が向きである（rules v0.2 §2.4）。
     // 席番号は足もとの左（絵の中心から左へ 0.3×size、下へ 0.32×size）に置き、燭台や顔を隠さない。
     return (
       <g key={pl.seat} aria-label={`${seatName(pl.seat)}の駒 ${pl.pos}`} data-testid={`piece-${pl.seat + 1}`} data-seat={pl.seat} className="piece">

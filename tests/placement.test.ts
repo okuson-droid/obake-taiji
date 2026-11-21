@@ -1,23 +1,23 @@
-// rules v0.1 §8（お化けの配置）、§8.2・§9.2（お化けカードの山札が尽きたときの終了と勝敗）
+// rules v0.2 §8（お化けの配置）、§8.2・§9.2（お化けカードの山札が尽きたときの終了と勝敗）
 import { describe, expect, test } from 'vitest';
 import { GHOST_CARD_BY_ID } from '../src/data/cards.ts';
-import { applyMove, createGame, getOptions, isGameOver } from '../src/game/engine.ts';
+import { createGame, getOptions, isGameOver } from '../src/game/engine.ts';
 import { rollDie } from '../src/game/rng.ts';
 import type { GameEvent, GameState } from '../src/game/types.ts';
-import { P, arrange, cardIds, play, playStill } from './helpers.ts';
+import { P, arrange, cardIds, playStill, playTurn } from './helpers.ts';
 
 /** 席 1 が D3 から南へ進んで D4 の最後の 1 枚を取り、配置が起きる局面 */
 const triggerPlacement = (extra: Parameters<typeof arrange>[0] = {}) => {
   const ids = cardIds();
   const card = ids.human('S');
   const s0 = arrange({ chips: [{ cell: 'D4' }], ...extra, seats: { ...extra.seats, 0: { pos: 'D3', hand: [card], ...extra.seats?.[0] } } });
-  return { s0, s1: applyMove(s0, play(card)) };
+  return { s0, s1: playTurn(s0, card) };
 };
 
 const placedEvents = (s: GameState) =>
   s.events.filter((e): e is Extract<GameEvent, { type: 'ghostPlaced' }> => e.type === 'ghostPlaced');
 
-describe('お化けの配置（rules v0.1 §8.1・§8.3）', () => {
+describe('お化けの配置（rules v0.2 §8.1・§8.3）', () => {
   test('§8.1 山札から 3 枚めくり、捨て札に置く', () => {
     const { s0, s1 } = triggerPlacement();
     expect(s1.ghostDiscard).toEqual([...s0.ghostDiscard, ...s0.ghostDeck.slice(0, 3)]);
@@ -83,7 +83,7 @@ describe('お化けの配置（rules v0.1 §8.1・§8.3）', () => {
   });
 });
 
-describe('お化けカードの山札が尽きたとき（rules v0.1 §8.2・§9.2）', () => {
+describe('お化けカードの山札が尽きたとき（rules v0.2 §8.2・§9.2）', () => {
   test('§8.2 めくった結果山札が 0 枚になったら配置せず、その時点でゲームを終了する（R-12）', () => {
     const { s0, s1 } = triggerPlacement({ ghostDeck: ['G20', 'G21', 'G22'] });
     expect(s1.ghostDeck).toEqual([]);

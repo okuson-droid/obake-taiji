@@ -1,10 +1,10 @@
 // design.md §4.4（explain）。選べない理由の表示文を確かめる。判定には使わない。
-// rules v0.1 §4.1（手番）、§4.3（手札）、§5.5(a)（連結条件）、§2.3（1 辺 1 本）、§9（終了）に対応する。
+// rules v0.2 §4.1（手番）、§4.3（手札）、§5.5(a)（連結条件）、§2.3（1 辺 1 本）、§9（終了）に対応する。
 import { describe, expect, test } from 'vitest';
 import { applyMove, getOptions } from '../src/game/engine.ts';
 import { explain } from '../src/game/explain.ts';
 import { targetOf } from '../src/game/targets.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, play, playTurn } from './helpers.ts';
 
 describe('explain（design §4.4）', () => {
   test('選べる要素には null を返す（すべての合法手）', () => {
@@ -12,7 +12,7 @@ describe('explain（design §4.4）', () => {
     const g = ids.ghost('E');
     const b = ids.barrier();
     const s0 = arrange({ chips: [{ cell: 'D4' }], barriers: ['E:C3'], seats: { 0: { hand: [g, b] } } });
-    for (const s of [s0, applyMove(s0, play(g)), applyMove(s0, play(b))]) {
+    for (const s of [s0, playTurn(s0, g), playTurn(s0, b)]) {
       for (const o of getOptions(s)) expect(explain(s, 0, targetOf(s, o))).toBeNull();
     }
   });
@@ -62,7 +62,7 @@ describe('explain（design §4.4）', () => {
     const ids = cardIds();
     const card = ids.human('E');
     const s0 = arrange({ chips: [{ cell: 'D4' }, { cell: 'A5' }], seats: { 0: { pos: 'C4', hand: [card], held: { normal: 9 } } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playTurn(s0, card);
     expect(explain(s1, 0, { type: 'handCard', card: P(s1, 0).hand[0]! })).toBe('ゲームは終了しました');
   });
 });

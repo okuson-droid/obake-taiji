@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { applyMove, createGame, getOptions, isGameOver } from '../src/game/engine.ts';
 import { isCheckpoint, replay, undoLast } from '../src/game/history.ts';
 import type { GameConfig, GameState, OptionId } from '../src/game/types.ts';
-import { arrange, cardIds, play, playStill, randomPicker } from './helpers.ts';
+import { arrange, cardIds, finish, play, playStill, randomPicker } from './helpers.ts';
 
 /** 乱択で n 手進め、適用した選択肢 ID の列と各局面を返す。 */
 const playRandom = (config: GameConfig, seed: number, n: number) => {
@@ -20,7 +20,7 @@ const playRandom = (config: GameConfig, seed: number, n: number) => {
   return { states, moves };
 };
 
-describe('決定性（rules v0.1 §3・§8.3、design §6.2）', () => {
+describe('決定性（rules v0.2 §3・§8.3、design §6.2）', () => {
   test('§3 同じシードの createGame に同じ選択肢 ID 列を適用すると、同じ GameState（JSON）になる', () => {
     for (const players of [2, 3, 4] as const) {
       const { states, moves } = playRandom({ players }, 31 + players, 300);
@@ -81,11 +81,11 @@ describe('isCheckpoint の各条件（design §4.2）', () => {
     expect(isCheckpoint(base, variant((s) => (s.rng = (s.rng + 1) >>> 0)))).toBe(true);
   });
 
-  test('非公開情報が公開された（移動カードを引いた、rules v0.1 §4.7）', () => {
+  test('非公開情報が公開された（移動カードを引いた、rules v0.2 §4.7）', () => {
     expect(isCheckpoint(base, variant((s) => s.events.push({ type: 'cardDrawn', seat: 0, card: 'M000' })))).toBe(true);
   });
 
-  test('怨霊との接触が発生した（rules v0.1 §7.2）', () => {
+  test('怨霊との接触が発生した（rules v0.2 §7.2）', () => {
     expect(isCheckpoint(base, variant((s) => s.events.push({ type: 'contact', seats: [0] })))).toBe(true);
   });
 
@@ -95,19 +95,23 @@ describe('isCheckpoint の各条件（design §4.2）', () => {
     ).toBe(true);
   });
 
-  test('手番番号が変わった（rules v0.1 §4.8）', () => {
+  test('手番番号が変わった（rules v0.2 §4.8）', () => {
     expect(isCheckpoint(base, variant((s) => (s.turnNo += 1)))).toBe(true);
   });
 
-  test('ゲームが終了した（rules v0.1 §9）', () => {
+  test('ゲームが終了した（rules v0.2 §9）', () => {
     expect(
       isCheckpoint(base, variant((s) => (s.result = { reason: 'score', winners: [0], scores: [10, 0] }))),
     ).toBe(true);
   });
 
-  test('§4.3〜§4.8 カードを使う手は、手番の終了まで進むためチェックポイントになる', () => {
-    const next = applyMove(base, getOptions(base)[0]!);
-    expect(isCheckpoint(base, next)).toBe(true);
+  test('§4.3〜§4.8 1 回目の行動はチェックポイントではなく（R-19 の実装上の扱い）、手番を終える 2 回目はカードを引くためチェックポイントになる', () => {
+    const ids = cardIds();
+    const [a, b] = [ids.human('E'), ids.human('S')];
+    const s0 = arrange({ chips: [{ cell: 'F1' }], seats: { 0: { pos: 'B4', hand: [a, b] } } });
+    const s1 = applyMove(s0, play(a));
+    expect(isCheckpoint(s0, s1)).toBe(false);
+    expect(isCheckpoint(s1, applyMove(s1, play(b)))).toBe(true);
   });
 
   test('§7.2(a) 接触でペナルティの選択待ちに止まる手は、接触によりチェックポイントになる', () => {
@@ -142,9 +146,12 @@ describe('isCheckpoint の各条件（design §4.2）', () => {
     const afterBarrier = applyMove(s0, play(b));
     expect(isCheckpoint(s0, afterGhost)).toBe(false);
     expect(isCheckpoint(s0, afterBarrier)).toBe(false);
-    // 対象を選ぶとカードを引くためチェックポイントになる。
-    expect(isCheckpoint(afterGhost, applyMove(afterGhost, 'ghost:c1'))).toBe(true);
-    expect(isCheckpoint(afterBarrier, applyMove(afterBarrier, getOptions(afterBarrier)[0]!))).toBe(true);
+    // rules v0.2：対象を選んでも 1 回目の行動が終わるだけなので、チェックポイントではない（R-19 の実装上の扱い）。
+    const ghostDone = applyMove(afterGhost, 'ghost:c1');
+    expect(isCheckpoint(afterGhost, ghostDone)).toBe(false);
+    expect(isCheckpoint(afterBarrier, applyMove(afterBarrier, getOptions(afterBarrier)[0]!))).toBe(false);
+    // 2 回目を終えるとカードを引くためチェックポイントになる。
+    expect(isCheckpoint(ghostDone, finish(ghostDone))).toBe(true);
   });
 });
 

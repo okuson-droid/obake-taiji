@@ -1,10 +1,10 @@
 // 演出の計画（src/ui/animation.ts）。出来事（GameEvent）だけから動きを決め、ルールを計算しないことを確かめる。
-// 対応する rules v0.1 の条項は各テストに書く。
+// 対応する rules v0.2 の条項は各テストに書く。
 import { describe, expect, test } from 'vitest';
 import { applyMove, createGame, getOptions } from '../src/game/engine.ts';
 import { TIMING, planAnimation, type AnimStep } from '../src/ui/animation.ts';
 import { SIZE } from '../src/ui/boardGeometry.ts';
-import { arrange, cardIds, play, randomPicker } from './helpers.ts';
+import { arrange, cardIds, finish, play, randomPicker } from './helpers.ts';
 
 const stepsFor = (steps: AnimStep[], type: AnimStep['target']['type']) => steps.filter((s) => s.target.type === type);
 
@@ -100,11 +100,12 @@ describe('演出の計画（animation.ts）', () => {
     expect(plan.overlays).toContainEqual(expect.objectContaining({ kind: 'plank', edge: 'S:D2' }));
   });
 
-  test('§6 獲得：移動の後に、お化けが駒へ吸い込まれて点数が浮かぶ', () => {
+  test('§6 獲得：移動の後に、お化けが駒へ吸い込まれて点数が浮かぶ（rules v0.2：手番の終わりの選択の演出に入る）', () => {
     const ids = cardIds();
     const card = ids.human('E');
     const s0 = arrange({ chips: [{ cell: 'D4', kind: 'golden' }, { cell: 'D4' }, { cell: 'A5' }], seats: { 0: { pos: 'C4', hand: [card] } } });
-    const plan = planAnimation(s0, applyMove(s0, play(card)))!;
+    // 1 回目に移動し、2 回目（finish）で手番を終える。finish の events は 1 回目からの出来事をすべて含む。
+    const plan = planAnimation(s0, finish(applyMove(s0, play(card))))!;
     const sprites = plan.overlays.filter((o) => o.kind === 'sprite');
     expect(sprites.map((o) => o.kind === 'sprite' && o.chipKind)).toEqual(['golden', 'normal']);
     expect(plan.overlays).toContainEqual(expect.objectContaining({ kind: 'text', text: '+4' }));
@@ -118,7 +119,7 @@ describe('演出の計画（animation.ts）', () => {
     const ids = cardIds();
     const card = ids.human('S');
     const s0 = arrange({ chips: [{ cell: 'D4' }], seats: { 0: { pos: 'D3', hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = finish(applyMove(s0, play(card)));
     const plan = planAnimation(s0, s1)!;
     const appear = stepsFor(plan.steps, 'chip');
     expect(appear.length).toBeGreaterThan(0);

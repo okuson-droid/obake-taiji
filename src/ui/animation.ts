@@ -96,7 +96,7 @@ export const planAnimation = (prev: GameState, next: GameState): AnimationPlan |
       case 'humanMoved': {
         const final = piecePlacement(next, e.seat);
         if (returned.has(e.seat)) {
-          // 怨霊の部屋に入って接触し、スタート地点へ戻る（rules v0.1 §7.2(a)）。
+          // 怨霊の部屋に入って接触し、スタート地点へ戻る（rules v0.2 §7.2(a)）。
           steps.push({
             target: { type: 'piece', seat: e.seat },
             frames: returnToStart(piecePlacement(prev, e.seat), slotPos(e.to, LEFT_SLOT), final),
@@ -145,7 +145,7 @@ export const planAnimation = (prev: GameState, next: GameState): AnimationPlan |
         const [dx, dy] = delta(slotPos(e.from, LEFT_SLOT), slotPos(e.to, LEFT_SLOT));
         steps.push({ target: { type: 'wraith' }, frames: [frame(dx, dy), frame()], delay: 0, duration: TIMING.move });
         end(0, TIMING.move);
-        // 怨霊が入った部屋にいた駒は接触してスタート地点へ戻る（rules v0.1 §7.2(b)）。
+        // 怨霊が入った部屋にいた駒は接触してスタート地点へ戻る（rules v0.2 §7.2(b)）。
         const hit = prev.players.filter((p) => p.pos === e.to && returned.has(p.seat));
         for (const p of hit) {
           const before = piecePlacement(prev, p.seat);
@@ -180,7 +180,7 @@ export const planAnimation = (prev: GameState, next: GameState): AnimationPlan |
         break;
       }
       case 'overlapPurged': {
-        // 怨霊の部屋のお化けを取り除く（rules v0.1 §7.5(b)）。
+        // 怨霊の部屋のお化けを取り除く（rules v0.2 §7.5(b)）。
         e.chips.forEach((chip, i) => {
           const kind = kindOf.get(chip) ?? 'normal';
           const id = `purge-${chip}`;
@@ -196,7 +196,7 @@ export const planAnimation = (prev: GameState, next: GameState): AnimationPlan |
     }
   }
 
-  // ② 獲得：お化けが駒に吸い込まれ、点数が浮かぶ（rules v0.1 §6）。
+  // ② 獲得：お化けが駒に吸い込まれ、点数が浮かぶ（rules v0.2 §6）。
   // 盤面は選択後の局面で描くため、獲得されたお化けは盤から消えている。獲得の演出が始まるまでは、
   // 一時的な絵で元の場所に見せておく。ただし、この選択で運ばれてきたお化けは移動の絵と重ならないよう隠しておく。
   const carried = new Set<ChipId>(
@@ -231,7 +231,7 @@ export const planAnimation = (prev: GameState, next: GameState): AnimationPlan |
       acquireEnd = Math.max(acquireEnd, delay + TIMING.acquire + 150);
     });
 
-  // ③ 出現：新しいお化けが現れる（rules v0.1 §8.3）。同じ印に重なるお化けは 1 回だけ動かす。
+  // ③ 出現：新しいお化けが現れる（rules v0.2 §8.3）。同じ印に重なるお化けは 1 回だけ動かす。
   const appeared = new Set<string>();
   events
     .filter((e): e is Extract<GameEvent, { type: 'ghostPlaced' }> => e.type === 'ghostPlaced')

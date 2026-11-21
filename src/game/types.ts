@@ -5,12 +5,12 @@
 
 export type Col = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 export type Row = 1 | 2 | 3 | 4 | 5 | 6;
-/** 部屋。例："C3"（rules v0.1 §2.1） */
+/** 部屋。例："C3"（rules v0.2 §2.1） */
 export type Cell = `${Col}${Row}`;
 /** 北・東・南・西 */
 export type Dir = 'N' | 'E' | 'S' | 'W';
 /**
- * 辺の ID（rules v0.1 §2.2）。
+ * 辺の ID（rules v0.2 §2.2）。
  * "E:B3" は B3 と C3 の間の辺、"S:B3" は B3 と B4 の間の辺である。
  * E は列 A〜E・行 1〜6 の 30 本、S は列 A〜F・行 1〜5 の 30 本、計 60 本である。
  * 型としては盤外を指す ID も表せるため、正しい辺の一覧は src/data/board.ts の EDGES を正とする。
@@ -55,7 +55,7 @@ export type Chip = { id: ChipId; kind: ChipKind; cell: Cell };
 
 export type PlayerState = {
   seat: Seat;
-  /** 自分のスタート地点（rules v0.1 §2.6） */
+  /** 自分のスタート地点（rules v0.2 §2.6） */
   start: Cell;
   pos: Cell;
   facing: Dir;
@@ -68,7 +68,7 @@ export type PlayerState = {
 export type GameConfig = { players: 2 | 3 | 4 };
 
 export type GameResult = {
-  /** rules v0.1 §9.1 / §9.2 */
+  /** rules v0.2 §9.1 / §9.2 */
   reason: 'score' | 'ghostDeck';
   /** 2 人以上なら引き分け */
   winners: Seat[];
@@ -76,7 +76,7 @@ export type GameResult = {
 };
 
 export type GameState = {
-  rulesVersion: '0.1';
+  rulesVersion: '0.2';
   config: GameConfig;
   seed: number;
   /** mulberry32 の内部状態（uint32） */
@@ -100,8 +100,10 @@ export type GameState = {
   turn: Seat;
   /** 1 始まり */
   turnNo: number;
-  /** rules v0.1 §4.5・§7.4 */
+  /** rules v0.2 §4.5・§7.4（手番の中で接触が起きたか） */
   contactThisTurn: boolean;
+  /** この手番でカードを使った回数（0〜2、rules v0.2 §4.3） */
+  actionsTaken: number;
   /** null はゲーム終了時のみ */
   pending: Pending | null;
   effectQueue: Instr[];
@@ -113,15 +115,15 @@ export type GameState = {
 // ---- 選択待ち（design.md §3.4） ----
 
 export type Pending =
-  /** rules v0.1 §7.5 */
+  /** rules v0.2 §7.5 */
   | { kind: 'overlapChoice'; player: Seat; options: OptionId[] }
-  /** rules v0.1 §4.3 */
+  /** rules v0.2 §4.3 */
   | { kind: 'playCard'; player: Seat; options: OptionId[] }
-  /** rules v0.1 §5.4 */
+  /** rules v0.2 §5.4 */
   | { kind: 'ghostTarget'; player: Seat; card: MoveCardId; options: OptionId[] }
-  /** rules v0.1 §5.5 */
+  /** rules v0.2 §5.5 */
   | { kind: 'barrierTarget'; player: Seat; card: MoveCardId; options: OptionId[] }
-  /** rules v0.1 §7.2 */
+  /** rules v0.2 §7.2 */
   | { kind: 'penaltyChip'; player: Seat; options: OptionId[] };
 
 // ---- 効果キューの命令（design.md §3.5） ----
@@ -139,6 +141,8 @@ export type Instr =
   | { op: 'penalty'; seat: Seat }
   /** §7.5(b) の除外 */
   | { op: 'purgeOverlap' }
+  /** 1 回の行動の効果を解決した後：2 回目へ進むか、手番の終わりの処理を積む（rules v0.2 §4.3〜§4.7） */
+  | { op: 'nextAction' }
   /** §6 */
   | { op: 'judge' }
   /** §4.6 */

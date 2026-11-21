@@ -238,6 +238,18 @@ button.selectable,
   font-size: 0.95rem;
 }
 
+.action-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* 盤面 */
 .board {
   width: 100%;
@@ -384,12 +396,13 @@ button.selectable,
 /* 手札 */
 .hand {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  /* 手札は 6 枚（rules v0.2 §3.4）。375px 幅でも 1 枚 50px 前後の幅を保つ。 */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .card {
-  padding: 3px;
+  padding: 2px;
   border-radius: 8px;
   border: 2px solid transparent;
   background: transparent;

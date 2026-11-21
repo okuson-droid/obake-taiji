@@ -33,7 +33,7 @@ describe('ロビー（design §7.5）', () => {
 
   test('部屋を作ると、席 1 に作成者が座ったロビーになる', () => {
     const d = lobby(3);
-    expect(d).toMatchObject({ schema: 1, rulesVersion: '0.1', status: 'lobby', host: 'u1', seed: 77, checkpoint: null, moves: [] });
+    expect(d).toMatchObject({ schema: 1, rulesVersion: '0.2', status: 'lobby', host: 'u1', seed: 77, checkpoint: null, moves: [] });
     expect(d.seats).toEqual([{ uid: 'u1', name: 'ホスト' }, null, null]);
   });
 

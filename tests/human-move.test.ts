@@ -1,17 +1,16 @@
-// rules v0.1 §5.1〜§5.3（人間移動カード）
+// rules v0.2 §5.1〜§5.3（人間移動カード）
 import { describe, expect, test } from 'vitest';
-import { applyMove } from '../src/game/engine.ts';
 import type { Dir, HumanCardKind } from '../src/game/types.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, playTurn } from './helpers.ts';
 
 const moveOnce = (kind: HumanCardKind, pos: 'C4' | 'A1' | 'F6', facing: Dir, barriers: ('E:C4' | 'S:C3')[] = []) => {
   const ids = cardIds();
   const card = ids.human(kind);
   const s0 = arrange({ chips: [{ cell: 'F3' }], barriers, seats: { 0: { pos, facing, hand: [card] } } });
-  return applyMove(s0, play(card));
+  return playTurn(s0, card);
 };
 
-describe('人間移動カード（rules v0.1 §5.1）', () => {
+describe('人間移動カード（rules v0.2 §5.1）', () => {
   // C4 から向き N で使ったときの移動先と向き
   const cases: [HumanCardKind, string, Dir][] = [
     ['front', 'C3', 'N'],
@@ -29,7 +28,7 @@ describe('人間移動カード（rules v0.1 §5.1）', () => {
       const ids = cardIds();
       const card = ids.human(kind);
       const s = arrange({ wraith: 'E5', chips: [{ cell: 'F3' }], seats: { 0: { pos: 'C4', facing: 'N', hand: [card] } } });
-      const s1 = applyMove(s, play(card));
+      const s1 = playTurn(s, card);
       expect(P(s1, 0).pos).toBe(to);
       expect(P(s1, 0).facing).toBe(facing);
       expect(s1.events).toContainEqual({ type: 'humanMoved', seat: 0, from: 'C4', to, facing, blocked: false });
@@ -71,28 +70,28 @@ describe('人間移動カード（rules v0.1 §5.1）', () => {
     const ids = cardIds();
     const card = ids.human('front');
     const s0 = arrange({ wraith: 'E5', chips: [{ cell: 'F3' }], barriers: ['S:C3'], seats: { 0: { pos: 'C4', facing: 'N', hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playTurn(s0, card);
     expect(P(s1, 0).pos).toBe('C4');
   });
 });
 
-describe('他の駒のいる部屋（rules v0.1 §5.2）', () => {
+describe('他の駒のいる部屋（rules v0.2 §5.2）', () => {
   test('§5.2 他のプレイヤー駒がいる部屋に入れる', () => {
     const ids = cardIds();
     const card = ids.human('E');
     const s0 = arrange({ chips: [{ cell: 'F3' }], seats: { 0: { pos: 'D5', hand: [card] }, 1: { pos: 'E5' } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playTurn(s0, card);
     expect(P(s1, 0).pos).toBe('E5');
     expect(P(s1, 1).pos).toBe('E5');
   });
 });
 
-describe('怨霊の部屋に入る（rules v0.1 §5.3）', () => {
+describe('怨霊の部屋に入る（rules v0.2 §5.3）', () => {
   test('§5.3 人間移動カードで怨霊コマのいる部屋に入ると接触が発生する', () => {
     const ids = cardIds();
     const card = ids.human('N');
     const s0 = arrange({ chips: [{ cell: 'F3' }], seats: { 0: { pos: 'C4', hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playTurn(s0, card);
     expect(s1.events).toContainEqual({ type: 'humanMoved', seat: 0, from: 'C4', to: 'C3', facing: 'N', blocked: false });
     expect(s1.events).toContainEqual({ type: 'contact', seats: [0] });
   });
@@ -101,7 +100,7 @@ describe('怨霊の部屋に入る（rules v0.1 §5.3）', () => {
     const ids = cardIds();
     const card = ids.human('N');
     const s0 = arrange({ chips: [{ cell: 'F3' }], barriers: ['S:C3'], seats: { 0: { pos: 'C4', hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playTurn(s0, card);
     expect(P(s1, 0).pos).toBe('C4');
     expect(s1.events.map((e) => e.type)).not.toContain('contact');
   });

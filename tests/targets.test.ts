@@ -1,5 +1,5 @@
 // design.md §4.3（targetOf）。選択肢 ID（design §6.1）と画面上の対象の対応を確かめる。
-// rules v0.1 §4.3（手札）、§5.4（チップ・怨霊）、§5.5（辺）、§7.2（失うチップ）、§7.5（2 択）に対応する。
+// rules v0.2 §4.3（手札）、§5.4（チップ・怨霊）、§5.5（辺）、§7.2（失うチップ）、§7.5（2 択）に対応する。
 import { describe, expect, test } from 'vitest';
 import { applyMove, getOptions } from '../src/game/engine.ts';
 import { optionOfTarget, targetOf } from '../src/game/targets.ts';

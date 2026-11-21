@@ -1,8 +1,8 @@
-// design.md §4.5（UI 向けの派生値）。rules v0.1 §5.1・§5.3・§6.4 に対応する。
+// design.md §4.5（UI 向けの派生値）。rules v0.2 §5.1・§5.3・§6.4 に対応する。
 import { describe, expect, test } from 'vitest';
-import { applyMove, createGame } from '../src/game/engine.ts';
+import { createGame } from '../src/game/engine.ts';
 import { chipsAt, deckCounts, isWraithRoom, previewHumanMove, scoreOf } from '../src/game/queries.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, playTurn } from './helpers.ts';
 
 describe('queries（design §4.5）', () => {
   test('§6.4 scoreOf は通常 1 点・ゴールデン 3 点で数える', () => {
@@ -33,7 +33,7 @@ describe('queries（design §4.5）', () => {
         const card = ids.human(kind);
         const s0 = arrange({ wraith: 'E5', chips: [{ cell: 'F1' }], barriers: ['S:B2'], seats: { 0: { pos, facing, hand: [card] } } });
         const preview = previewHumanMove(s0, 0, card);
-        const s1 = applyMove(s0, play(card));
+        const s1 = playTurn(s0, card);
         expect(preview).toEqual({ to: P(s1, 0).pos, facing: P(s1, 0).facing, blocked: P(s1, 0).pos === pos, contact: false });
       }
     }
@@ -64,6 +64,6 @@ describe('queries（design §4.5）', () => {
 
   test('§3.4・§3.5 deckCounts は山札と捨て札の残り枚数を返す', () => {
     const s = createGame({ players: 3 }, 1);
-    expect(deckCounts(s)).toEqual({ move: 168, moveDiscard: 0, ghost: 27 });
+    expect(deckCounts(s)).toEqual({ move: 180 - 6 * 3, moveDiscard: 0, ghost: 27 });
   });
 });

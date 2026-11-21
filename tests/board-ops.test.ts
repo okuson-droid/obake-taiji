@@ -1,4 +1,4 @@
-// rules v0.1 §5.1（人間移動カードの方角）、§2.2（隣接と外周の壁）、§5.5（連結条件）
+// rules v0.2 §5.1（人間移動カードの方角）、§2.2（隣接と外周の壁）、§5.5（連結条件）
 import { describe, expect, test } from 'vitest';
 import { CELLS, EDGE_IDS } from '../src/data/board.ts';
 import {
@@ -15,7 +15,7 @@ import {
 } from '../src/game/board-ops.ts';
 import type { Dir, EdgeId, HumanCardKind } from '../src/game/types.ts';
 
-describe('方角の回転（rules v0.1 §5.1、design §3.1）', () => {
+describe('方角の回転（rules v0.2 §5.1、design §3.1）', () => {
   test('§5.1 右は時計回りに 90 度（N→E→S→W→N）', () => {
     expect(['N', 'E', 'S', 'W'].map((d) => turnRight(d as Dir))).toEqual(['E', 'S', 'W', 'N']);
   });
@@ -37,7 +37,7 @@ describe('方角の回転（rules v0.1 §5.1、design §3.1）', () => {
   });
 });
 
-describe('人間移動カードの移動方角（rules v0.1 §5.1 手順 1）', () => {
+describe('人間移動カードの移動方角（rules v0.2 §5.1 手順 1）', () => {
   // [カードの種類, 向き N のとき, 向き E のとき, 向き S のとき, 向き W のとき]
   const table: [HumanCardKind, Dir, Dir, Dir, Dir][] = [
     ['front', 'N', 'E', 'S', 'W'],
@@ -60,7 +60,7 @@ describe('人間移動カードの移動方角（rules v0.1 §5.1 手順 1）', 
   }
 });
 
-describe('隣の部屋（rules v0.1 §2.1・§2.2）', () => {
+describe('隣の部屋（rules v0.2 §2.1・§2.2）', () => {
   test('§2.1 北は行番号が減り、東は列が進む', () => {
     expect(neighbor('C3', 'N')).toBe('C2');
     expect(neighbor('C3', 'S')).toBe('C4');
@@ -109,7 +109,7 @@ describe('隣の部屋（rules v0.1 §2.1・§2.2）', () => {
   });
 });
 
-describe('通せん棒の有無（rules v0.1 §2.3）', () => {
+describe('通せん棒の有無（rules v0.2 §2.3）', () => {
   test('§2.3 置かれた辺だけが通せん棒ありと判定される', () => {
     const barriers: EdgeId[] = ['E:B3', 'S:C4'];
     expect(hasBarrier(barriers, 'E:B3')).toBe(true);
@@ -119,7 +119,7 @@ describe('通せん棒の有無（rules v0.1 §2.3）', () => {
   });
 });
 
-describe('連結判定（rules v0.1 §5.5、design §5.11）', () => {
+describe('連結判定（rules v0.2 §5.5、design §5.11）', () => {
   test('§5.5 通せん棒なしで連結している', () => {
     expect(isConnected([])).toBe(true);
   });
