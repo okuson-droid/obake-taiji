@@ -63,16 +63,17 @@ const playOwnTurns = async (page: Page, seed: number): Promise<number> => {
 };
 
 /**
- * [人数, シード]。2〜4 ページの両端（2 と 4）を打つ。3 ページ（シード 22）も終局まで一致することを
- * 手元で確かめたが、CI の所要時間を抑えるため常設の検査からは外した。
+ * [人数, シード]。2〜4 ページの両端（2 と 4）を打つ。3 ページも終局まで一致することを手元で確かめたが、
+ * CI の所要時間を抑えるため常設の検査からは外した。rules v0.2 では乱択の 1 局が長くなりやすいため、
+ * 4 ページは短く終わるシード 55 を使う（シード 33・44 は 8 分を超えた）。
  */
 const ROOMS: [number, number][] = [
   [2, 11],
-  [4, 33],
+  [4, 55],
 ];
 
 for (const [players, seed] of ROOMS) {
-  test(`偽 DB で ${players} ページをつなぎ、各自の手番だけを打って終局し、全ページの最終局面が一致する`, async ({ context }) => {
+  test(`偽 DB で ${players} ページ（シード ${seed}）をつなぎ、各自の手番だけを打って終局し、全ページの最終局面が一致する`, async ({ context }) => {
     const started = Date.now();
     const pages = await setUpRoom(context, players, seed);
     const errors = pages.map(collectErrors);

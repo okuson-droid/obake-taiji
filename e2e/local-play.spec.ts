@@ -79,8 +79,9 @@ test.describe('タッチ操作（U-02）', () => {
     await expect(page.getByTestId('preview')).toBeVisible();
     await expect(page.getByTestId('blind-reveal')).toHaveCount(0);
     await page.locator(`[data-option="${option}"]`).tap();
-    // 決定すると手番が席 2 に移り、目隠し画面になる。
-    await expect(page.getByTestId('blind-reveal')).toHaveText(/席 2 の番です。/);
+    // 決定すると、同じ席の 2 回目の行動に進む（rules v0.2 §4.3）。
+    await expect(page.getByTestId('action-count')).toHaveText('2 回目／2 回');
+    await expect(page.getByTestId('blind-reveal')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 });
@@ -94,22 +95,21 @@ test.describe('演出（カードを使った後の動き）', () => {
     await page.goto(appUrl('#/local/2?seed=101'));
     await page.getByTestId('blind-reveal').click();
 
-    // 1 手目：人間移動カードを使う（マウスではホバーで予告し、クリックで決定する）。
+    // 1 手目の 1 回目：人間移動カードを使う（マウスではホバーで予告し、クリックで決定する）。
     await page.locator('[data-testid=hand-card].kind-human[data-option]').first().click();
     await expect(page.getByTestId('watching')).toBeVisible();
     expect(await page.locator('[data-option]').count()).toBe(0);
     expect(await page.getByTestId('hand-card').count()).toBe(0);
     expect(await page.locator('[data-seat="0"]').evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0);
-    // 演出が終わると、席 2 の目隠し画面になる。
+    // 演出が終わると、同じ席の 2 回目に戻る（rules v0.2 §4.3）。
     await expect(page.getByTestId('watching')).toHaveCount(0, { timeout: 5000 });
-    await expect(page.getByTestId('blind-reveal')).toHaveText(/席 2 の番です。/);
+    await expect(page.getByTestId('action-count')).toHaveText('2 回目／2 回');
 
-    // 2 手目：演出を「タップで飛ばす」。
-    await page.getByTestId('blind-reveal').click();
+    // 2 回目：人間移動カードを使い、演出を「タップで飛ばす」と、席 2 の目隠し画面になる。
     await page.locator('[data-testid=hand-card].kind-human[data-option]').first().click();
     await expect(page.getByTestId('watching')).toBeVisible();
     await page.getByTestId('skip-animation').click();
-    await expect(page.getByTestId('blind-reveal')).toHaveText(/席 1 の番です。/, { timeout: 1000 });
+    await expect(page.getByTestId('blind-reveal')).toHaveText(/席 2 の番です。/, { timeout: 1000 });
     expect(errors).toEqual([]);
   });
 });
