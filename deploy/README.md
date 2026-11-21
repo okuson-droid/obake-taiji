@@ -1,87 +1,106 @@
-# オンライン対戦の準備手順（Supabase と GitHub）
+# オンライン対戦の準備手順（Firebase と GitHub）
 
-この文書は、オンライン対戦を公開版で使えるようにするための準備手順である。正の手順書は claude.ai プロジェクトの setup.md であり、この文書は第 5 段階で Claude Code が設計書（design.md §7.4・§10）と決定記録（decisions.md D-06・D-08・D-09）をもとに書いた案である。setup.md と食い違う場合は setup.md に合わせて直す。
+この文書は、オンライン対戦を公開版で使えるようにするための準備手順である。同期には Firebase Realtime Database と匿名ログインを使う。無料の Spark プランで動き、支払い情報の登録は要らない。
 
-Supabase と GitHub の画面の名前は変わることがある。見つからない場合は、近い名前の項目を探す。
+もとの設計（design.md §7.4、decisions.md D-01・D-06・D-09）は Supabase を前提としていた。Supabase の無料プランでプロジェクトを作れなかったため、Firebase に切り替えた（2026-11-21、ユーザーの決定）。設計文書の改訂は claude.ai プロジェクトで行う。
+
+Firebase と GitHub の画面の名前は変わることがある。見つからない場合は、近い名前の項目を探す。
 
 ## 0. 全体の流れ
 
-1. Supabase のプロジェクトを作る。
-2. `deploy/supabase.sql` を実行して、テーブル・関数・権限を作る。
-3. 匿名ログインを有効にする。
-4. Project URL と publishable key を控える。
-5. GitHub のリポジトリの Variables に登録する。
-6. 公開をやり直し、トップに「オンラインで遊ぶ」が出ることを確かめる。
+1. Firebase のプロジェクトを作る。
+2. 匿名ログインを有効にする。
+3. Realtime Database を作り、`deploy/firebase.rules.json` のルールを公開する。
+4. ウェブアプリを登録して、設定の値を控える。
+5. 公開先のドメインを、認証の承認済みドメインに足す。
+6. GitHub のリポジトリの Variables に登録する。
+7. 公開をやり直し、トップに「オンラインで遊ぶ」が出ることを確かめる。
 
-## 1. Supabase のプロジェクトを作る
+## 1. Firebase のプロジェクトを作る
 
-1. https://supabase.com にログインし、New project を選ぶ。
-2. 名前は `obake-taiji` など任意でよい。Region は利用者に近い場所（日本なら Northeast Asia (Tokyo)）を選ぶ。
-3. データベースのパスワードは、このゲームでは使わない。控えておくだけでよい。リポジトリやチャットには書かない。
+1. https://console.firebase.google.com を開き、Google アカウントでログインする。
+2. 「プロジェクトを作成」（または「プロジェクトを追加」）を選ぶ。名前は `obake-taiji` など任意でよい。
+3. Google アナリティクスは使わないので、無効のままでよい。
+4. 料金プランは Spark（無料）のままにする。支払い情報は登録しない。登録していなければ、無料枠を超えても請求は来ない（その月の残りはサービスが止まる）。
 
-## 2. テーブル・関数・権限を作る
+## 2. 匿名ログインを有効にする
 
-1. 左のメニューの SQL Editor を開き、New query を選ぶ。
-2. このリポジトリの `deploy/supabase.sql` の内容をすべて貼り付け、Run を押す。
-3. 次のものができる。
-   - `rooms` テーブル（1 ゲーム＝1 行）。行単位のセキュリティ（RLS）を有効にし、読み取りはログイン済みの利用者に、作成は作成者本人に限る。
-   - `write_room` 関数。更新はこの関数に限り、版の一致と、対局中は書き込み者が着席していることを検査する（D-06）。
-   - `clear_room` 関数。作成者だけが部屋を消せる。
-   - Realtime の配信対象への `rooms` の追加。
-4. 2 回目以降に実行すると「すでにある」というエラーになる。作り直す場合は、Table Editor で `rooms` を消してから実行する。
-
-## 3. 匿名ログインを有効にする
-
-1. Authentication → Sign In / Providers（または Providers）を開く。
-2. Allow anonymous sign-ins（匿名ログイン）を有効にして保存する。
+1. 左のメニューの「構築」→「Authentication」を開き、「始める」を押す。
+2. 「Sign-in method」のタブで「匿名」を選び、有効にして保存する。
 3. 遊ぶ人はアカウントを作らない。各端末に匿名の利用者が作られ、ブラウザに保存される。再読み込みしても同じ席に戻れる。
-4. 匿名ログインを悪用した大量登録が気になる場合は、Authentication の設定で CAPTCHA や回数の上限を検討する（身内で遊ぶ前提のため、初期状態では設定しない）。
 
-## 4. Project URL と publishable key を控える
+## 3. Realtime Database を作り、ルールを公開する
 
-1. Project Settings → API Keys（または Data API）を開く。
-2. 次の 2 つを控える。
-   - Project URL（`https://xxxx.supabase.co` の形）
-   - Publishable key（`sb_publishable_` で始まる鍵）
-3. secret key（`sb_secret_` で始まる鍵）と、レガシーの anon key・service_role key は使わない（D-09）。secret key はどこにも貼らない。
-4. publishable key はブラウザに公開してよい低権限の鍵である。守りは RLS と `write_room` 関数が担う。
+1. 「構築」→「Realtime Database」を開き、「データベースを作成」を押す。
+2. ロケーションは、日本から近い「シンガポール（asia-southeast1）」を選ぶ。
+3. セキュリティルールは「ロックモードで開始」を選ぶ。
+4. 作成後、「ルール」のタブを開き、中身をこのリポジトリの `deploy/firebase.rules.json` の内容にすべて置き換えて、「公開」を押す。
+5. ルールが守ること（Supabase 案の RLS と `write_room` 関数に当たる）：
+   - 読み書きできるのは、ログイン済み（匿名を含む）の利用者が `/rooms/<部屋コード>` に対して行う場合だけである。部屋コードは英大文字と数字の 6 桁に限る。
+   - 部屋を作れるのは、作成者として自分の uid を書き、版を 1 にする場合だけである。
+   - 部屋を書き換えるときは、版をちょうど 1 つ進めなければならない（後から書いた古い版は拒まれる）。作成者は変えられない。
+   - ロビーの間は誰でも書ける（着席のため）。対局中と終局後は、着席している人だけが書ける（D-06）。
+   - 部屋を消せるのは作成者だけである。
+6. ルールの中身の正しさ（選択肢がルール違反でないか）は検査しない。不正な手は、各ブラウザが `replay` で弾く（D-06）。
 
-## 5. GitHub の Variables に登録する
+## 4. ウェブアプリを登録して、設定の値を控える
+
+1. 左上の歯車 →「プロジェクトの設定」→「全般」を開く。
+2. 「マイアプリ」で、ウェブ（`</>` の印）を選ぶ。アプリのニックネームは任意でよい。Firebase Hosting は使わないので、設定しない。
+3. 表示される `firebaseConfig` から、次の 4 つの値を控える。
+   - `apiKey`
+   - `authDomain`（`<プロジェクト ID>.firebaseapp.com` の形）
+   - `databaseURL`（`https://<プロジェクト ID>-default-rtdb.asia-southeast1.firebasedatabase.app` の形）
+   - `projectId`
+4. `databaseURL` が表示されない場合は、Realtime Database の「データ」のタブの上部に出ている URL を使う。
+5. `apiKey` はブラウザに公開してよい値である（Firebase の鍵は利用者を識別するためのもので、守りは Security Rules が担う）。それでも気になる場合は、Google Cloud コンソールの「API とサービス」→「認証情報」で、この鍵を HTTP リファラー `https://okuson-droid.github.io/*` に制限できる。制限を誤るとログインできなくなるため、確かめながら行う。
+
+## 5. 承認済みドメインを足す
+
+1. 「Authentication」→「設定」→「承認済みドメイン」を開く。
+2. 「ドメインの追加」で `okuson-droid.github.io` を足す。
+
+## 6. GitHub の Variables に登録する
 
 1. GitHub のリポジトリ `okuson-droid/obake-taiji` の Settings → Secrets and variables → Actions を開く。
-2. Variables のタブ（Secrets ではない）で New repository variable を選び、次の 2 つを登録する。
+2. Variables のタブ（Secrets ではない）で New repository variable を選び、次の 4 つを登録する。
 
    | 名前 | 値 |
    |---|---|
-   | `SUPABASE_URL` | 手順 4 の Project URL |
-   | `SUPABASE_PUBLISHABLE_KEY` | 手順 4 の Publishable key |
+   | `FIREBASE_API_KEY` | 手順 4 の `apiKey` |
+   | `FIREBASE_AUTH_DOMAIN` | 手順 4 の `authDomain` |
+   | `FIREBASE_DATABASE_URL` | 手順 4 の `databaseURL` |
+   | `FIREBASE_PROJECT_ID` | 手順 4 の `projectId` |
 
-3. `deploy.yml` がビルドのときに、これらを `VITE_SUPABASE_URL`・`VITE_SUPABASE_PUBLISHABLE_KEY` として埋め込む。値が空なら、オンライン対戦の入口は隠れる（D-08）。
+3. `deploy.yml` がビルドのときに、これらを `VITE_FIREBASE_*` として埋め込む。1 つでも空なら、オンライン対戦の入口は隠れる。
+4. 以前に Supabase 用の Variables（`SUPABASE_URL`・`SUPABASE_PUBLISHABLE_KEY`）を登録していた場合は、使わないので消してよい。
 
-## 6. 公開をやり直して確かめる
+## 7. 公開をやり直して確かめる
 
 1. GitHub の Actions → Deploy を開き、Run workflow で手動で実行する（main への push でも実行される）。
 2. 公開版（https://okuson-droid.github.io/obake-taiji/）を開き、トップに「オンラインで遊ぶ」が出ることを確かめる。
 3. 1 台目で名前を入れて「部屋を作る」を押し、表示された招待リンクを 2 台目で開く。2 台目で名前を入れて「この部屋に座る」を押す。
 4. 全席がそろったら、1 台目で「開始する」を押す。それぞれの端末で自分の番だけ操作でき、相手の操作がすぐに反映されることを確かめる。
+5. Realtime Database の「データ」のタブに `rooms` の下に部屋ができていれば、書き込みは届いている。
+
+## 無料枠の目安
+
+Spark プランの Realtime Database は、保存容量 1GB、ダウンロード量 10GB／月、同時接続 100 である（変わることがあるので、Firebase の料金ページで確かめる）。1 回の書き込みで部屋の記録（数 KB）を参加者全員に配るため、身内で遊ぶ回数なら十分に収まる。使用量は Realtime Database の「使用状況」のタブで見られる。
 
 ## うまく動かないとき
 
-- 「オンラインで遊ぶ」が出ない：Variables の名前の綴りと、Deploy を実行し直したかを確かめる。
-- 「接続できませんでした」と出る：匿名ログインが有効か（手順 3）、publishable key が正しいかを確かめる。
-- 部屋は作れるが、相手の操作が反映されない：`deploy/supabase.sql` の最後の行（Realtime への追加）が実行されたかを、Database → Publications の `supabase_realtime` で確かめる。
+- 「オンラインで遊ぶ」が出ない：Variables の 4 つの名前の綴りと、Deploy を実行し直したかを確かめる。
+- 「接続できませんでした」と出る：匿名ログインが有効か（手順 2）、`apiKey`・`authDomain`・`projectId` が正しいか、承認済みドメイン（手順 5）を確かめる。
+- 部屋を作れない、座れない、手が反映されない：ルールを公開したか（手順 3 の 4.）、`databaseURL` が正しいか（ロケーションの部分を含む）を確かめる。ブラウザの開発者ツールのコンソールに `PERMISSION_DENIED` が出ていれば、ルールに拒まれている。
 - 「ほかの操作と重なったため、最新の状態に戻しました」と出る：2 か所から同時に書き込んだため、後の書き込みを捨てた。もう一度選べばよい（design.md §7.3 の 4.）。
 
 ## 片付け
 
 - 終局後、作成者は「部屋を片付ける」で部屋を消せる。
-- 消されずに残った古い部屋は、SQL Editor で次のように消せる。
-
-  ```sql
-  delete from public.rooms where updated_at < now() - interval '7 days';
-  ```
+- 消されずに残った部屋は、Realtime Database の「データ」のタブで `rooms` の下の部屋コードを選んで削除できる。
 
 ## 既知の制約
 
-- 共有ドキュメントには山札と全員の手札が入るため、開発者ツールで他人の手札を覗ける。身内で遊ぶ前提で受け入れている（D-05）。画面と DOM には他人の手札を出さない。
+- 共有データには山札と全員の手札が入るため、開発者ツールで他人の手札を覗ける。身内で遊ぶ前提で受け入れている（D-05）。画面と DOM には他人の手札を出さない。
 - 不正な手（ルール違反）はサーバーでは検査しない。各ブラウザが `replay` で弾く（D-06）。
+- 着席している人は、対局中も部屋の記録を書き換えられる。身内で遊ぶ前提で、サーバー側での手の検査は行わない。
