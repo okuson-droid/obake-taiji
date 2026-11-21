@@ -1,4 +1,4 @@
-// 性質テスト（design.md §9.2）：3 人。rules v0.1 §2.3・§2.7・§2.9・§4.3・§4.7・§5.5・§7.3・§9 の不変条件と終局を確かめる。
+// 性質テスト（design.md §9.2）：3 人。rules v0.2 §2.3・§2.7・§2.9・§4.3・§4.7・§5.5・§7.3・§9 の不変条件と終局を確かめる。
 import { expect, test } from 'vitest';
 import { MAX_MOVES, SEED_COUNT, playout, summarize } from './property.ts';
 

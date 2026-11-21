@@ -36,7 +36,7 @@ export const ART = {
 export const ArtDefs = () => (
   <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
     <defs>
-      {/* お化け（通常、rules v0.1 §2.7）：シーツのお化け */}
+      {/* お化け（通常、rules v0.2 §2.7）：シーツのお化け */}
       <symbol id="art-chip-normal" viewBox="0 0 100 100">
         <path
           d="M 50 14 C 30 14 24 34 24 52 C 24 66 18 78 14 86 C 24 84 26 90 34 86 C 40 92 46 86 50 90 C 56 86 60 92 66 86 C 74 90 78 84 86 86 C 82 78 76 66 76 52 C 76 34 70 14 50 14 Z"
@@ -61,7 +61,7 @@ export const ArtDefs = () => (
         <ellipse cx={42} cy={45} rx={5.5} ry={7.5} fill={ART.ink} />
         <ellipse cx={58} cy={45} rx={5.5} ry={7.5} fill={ART.ink} />
       </symbol>
-      {/* 怨霊（rules v0.1 §2.8）：頭巾の亡霊と鎖 */}
+      {/* 怨霊（rules v0.2 §2.8）：頭巾の亡霊と鎖 */}
       <symbol id="art-wraith" viewBox="0 0 100 100">
         <path
           d="M 50 8 C 26 10 20 36 20 56 L 14 94 L 31 85 L 41 96 L 50 85 L 59 96 L 69 85 L 86 94 L 80 56 C 80 36 74 10 50 8 Z"
@@ -74,7 +74,7 @@ export const ArtDefs = () => (
         <ellipse cx={56.5} cy={41} rx={4} ry={2.8} fill={ART.eye} />
         <path d="M 24 68 q 8 6 17 0 q 9 -6 18 0 q 8 6 17 0" stroke={ART.chain} strokeWidth={3.5} fill="none" strokeDasharray="5 3" />
       </symbol>
-      {/* 人間駒（rules v0.1 §2.4）：帽子とコートの探索者の立ち姿。コートと帽子の帯は currentColor（席の色）。
+      {/* 人間駒（rules v0.2 §2.4）：帽子とコートの探索者の立ち姿。コートと帽子の帯は currentColor（席の色）。
           向きは姿勢で示す。南は正面（顔が見える）、北は背中（燭台を頭上に掲げる）、
           東は横顔（燭台を進む方へ差し出す）。西は東の絵を左右反転して使う。 */}
       <symbol id="art-player-front" viewBox="0 0 100 100">

@@ -1,12 +1,13 @@
 // テスト用の補助関数。特定の局面を作るために GameState を直接組み立てる。
 // ゲームロジック（src/game）からは使わない。
-import { MOVE_CARDS } from '../src/data/cards.ts';
-import { applyMove, createGame } from '../src/game/engine.ts';
+import { MOVE_CARDS, MOVE_CARD_BY_ID } from '../src/data/cards.ts';
+import { HAND_SIZE, applyMove, createGame } from '../src/game/engine.ts';
 import { askPlayCard } from '../src/game/executor.ts';
 import { next as nextRandom, seedToState } from '../src/game/rng.ts';
 import type {
   Cell,
   Chip,
+  EdgeId,
   ChipKind,
   Dir,
   GameState,
@@ -55,7 +56,7 @@ export type Arrangement = {
  * createGame の結果をもとに、指定した局面を組み立てる。
  * 手番プレイヤーの playCard の選択待ちで止まった状態を返す。
  * 手札に指定したカードは、山札・捨て札・他人の手札から取り除いて重複を避ける。
- * 手札は指定したカードを先頭に置き、4 枚に満たない分を山札の先頭から補う。
+ * 手札は指定したカードを先頭に置き、6 枚に満たない分を山札の先頭から補う。
  */
 export const arrange = (a: Arrangement): GameState => {
   const s = structuredClone(createGame({ players: a.players ?? 2 }, a.seed ?? 1));
@@ -89,9 +90,9 @@ export const arrange = (a: Arrangement): GameState => {
       if (a.seats?.[seatKey as Seat]?.hand === undefined) p.hand = p.hand.filter((id) => !claimed.has(id));
     }
   }
-  // 手札が 4 枚に満たない席は、山札の先頭から補う（指定したカードが手札の先頭に来る）。
+  // 手札が 6 枚（rules v0.2 §3.4）に満たない席は、山札の先頭から補う（指定したカードが手札の先頭に来る）。
   for (const p of s.players) {
-    while (p.hand.length < 4) {
+    while (p.hand.length < HAND_SIZE) {
       const id = s.moveDeck.shift();
       if (id === undefined) throw new Error('山札が足りない');
       p.hand.push(id);
@@ -127,13 +128,43 @@ export const P = (s: GameState, seat: number): PlayerState => {
 };
 
 /**
- * 手番プレイヤーが通せん棒カード card を使い、設置できる最初の辺（辺 ID の昇順で先頭）に置く。
- * 駒もチップも動かさずに、獲得判定以降の手番の処理を進めたいときに使う（rules v0.1 §5.5(a)）。
+ * 1 回目の行動を終えた局面（2 回目のカードの選択待ち）から、2 回目の行動として通せん棒を edge に置き、
+ * 手番を終える（rules v0.2 §4.3〜§4.7）。駒もお化けも動かさずに、手番の終わりの処理を進めたいときに使う。
+ * 手札に通せん棒カードがなければ、手札の最後の 1 枚を山札の通せん棒カードと入れ替える（局面の組み立て）。
+ * 2 回目の選択待ちでなければ（対象の選択中、接触で手番が終わった、終局など）、そのまま返す。
+ * events には、渡した局面の events に、2 回目の行動で起きた出来事を続けたものを入れる。
+ */
+export const finish = (s: GameState, edge: EdgeId = 'E:D1'): GameState => {
+  if (s.result !== null || s.pending?.kind !== 'playCard' || s.actionsTaken !== 1) return s;
+  const t = structuredClone(s);
+  const p = t.players[t.turn]!;
+  let barrier = p.hand.find((id) => MOVE_CARD_BY_ID[id]?.type === 'barrier');
+  if (barrier === undefined) {
+    const i = t.moveDeck.findIndex((id) => MOVE_CARD_BY_ID[id]?.type === 'barrier');
+    if (i < 0) throw new Error('山札に通せん棒カードがない');
+    barrier = t.moveDeck[i]!;
+    t.moveDeck[i] = p.hand.pop()!;
+    p.hand.push(barrier);
+    t.pending = null;
+    askPlayCard(t);
+  }
+  const mid = applyMove(t, play(barrier));
+  const place: OptionId = `barrier:place:${edge}`;
+  const end = applyMove(mid, mid.pending!.options.includes(place) ? place : mid.pending!.options[0]!);
+  return { ...end, events: [...s.events, ...mid.events, ...end.events] };
+};
+
+/**
+ * 手番プレイヤーが通せん棒カード card を使い、設置できる最初の辺（辺 ID の昇順で先頭）に置いてから、
+ * 2 回目の行動（finish）で手番を終える。駒もお化けも動かさずに、手番の終わりの処理を進めたいときに使う（rules v0.2 §5.5(a)・§4.3）。
  */
 export const playStill = (s: GameState, card: MoveCardId): GameState => {
   const t = applyMove(s, play(card));
   if (t.pending?.kind !== 'barrierTarget') throw new Error(`${card} は通せん棒カードではない`);
   const place = t.pending.options.find((o) => o.startsWith('barrier:place:'));
   if (place === undefined) throw new Error('設置できる辺がない');
-  return applyMove(t, place);
+  return finish(applyMove(t, place));
 };
+
+/** 手番プレイヤーが card を 1 回目に使い、2 回目は finish で手番を終える。 */
+export const playTurn = (s: GameState, card: MoveCardId): GameState => finish(applyMove(s, play(card)));

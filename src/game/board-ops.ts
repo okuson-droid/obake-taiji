@@ -1,4 +1,4 @@
-// 盤面の計算（rules v0.1 §2.1・§2.2・§5.1・§5.5、design.md §3.1・§5.11）。
+// 盤面の計算（rules v0.2 §2.1・§2.2・§5.1・§5.5、design.md §3.1・§5.11）。
 import { COLS, CELLS, EDGES, ROWS } from '../data/board.ts';
 import type { Cell, Col, Dir, EdgeId, HumanCardKind, Row } from './types.ts';
 
@@ -19,7 +19,7 @@ export const turnLeft = (dir: Dir): Dir => rotate(dir, -1);
 export const reverse = (dir: Dir): Dir => rotate(dir, 2);
 
 /**
- * 人間移動カードの移動方角を決める（rules v0.1 §5.1 の手順 1）。
+ * 人間移動カードの移動方角を決める（rules v0.2 §5.1 の手順 1）。
  * 「東」「西」「南」「北」はその方角、「前」「後ろ」「右」「左」は現在の向きからの相対である。
  */
 export const humanMoveDir = (facing: Dir, kind: HumanCardKind): Dir => {
@@ -57,7 +57,7 @@ const DELTA: Readonly<Record<Dir, { dc: number; dr: number }>> = {
   W: { dc: -1, dr: 0 },
 };
 
-/** dir の方角の隣の部屋を返す。外周の壁であれば null を返す（rules v0.1 §2.2）。 */
+/** dir の方角の隣の部屋を返す。外周の壁であれば null を返す（rules v0.2 §2.2）。 */
 export const neighbor = (cell: Cell, dir: Dir): Cell | null => {
   const { col, row } = cellIndex(cell);
   const d = DELTA[dir];
@@ -102,7 +102,7 @@ const openAdjacency = (barriers: readonly EdgeId[]): Map<Cell, Cell[]> => {
 };
 
 /**
- * 連結判定（rules v0.1 §5.5、design.md §5.11）。
+ * 連結判定（rules v0.2 §5.5、design.md §5.11）。
  * 通せん棒のない辺だけをたどる幅優先探索を A1 から行い、36 部屋すべてに届けば true を返す。
  */
 export const isConnected = (barriers: readonly EdgeId[]): boolean => {

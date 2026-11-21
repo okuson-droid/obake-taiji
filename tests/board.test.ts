@@ -1,4 +1,4 @@
-// rules v0.1 §2.1・§2.2（部屋と辺）、§2.5・§2.6（スタート地点と開始時の向き）、§2.8（怨霊の初期位置）
+// rules v0.2 §2.1・§2.2（部屋と辺）、§2.5・§2.6（スタート地点と開始時の向き）、§2.8（怨霊の初期位置）
 import { describe, expect, test } from 'vitest';
 import {
   CELLS,
@@ -11,7 +11,7 @@ import {
 } from '../src/data/board.ts';
 import { cellIndex, edgeBetween } from '../src/game/board-ops.ts';
 
-describe('部屋（rules v0.1 §2.1）', () => {
+describe('部屋（rules v0.2 §2.1）', () => {
   test('§2.1 部屋は A1〜F6 の 36 部屋で重複しない', () => {
     expect(CELLS).toHaveLength(36);
     expect(new Set(CELLS).size).toBe(36);
@@ -23,7 +23,7 @@ describe('部屋（rules v0.1 §2.1）', () => {
   });
 });
 
-describe('辺（rules v0.1 §2.2）', () => {
+describe('辺（rules v0.2 §2.2）', () => {
   test('§2.2 辺は 60 本で ID が重複しない', () => {
     expect(EDGES).toHaveLength(60);
     expect(new Set(EDGE_IDS).size).toBe(60);
@@ -83,7 +83,7 @@ describe('辺（rules v0.1 §2.2）', () => {
   });
 });
 
-describe('スタート地点（rules v0.1 §2.5・§2.6）', () => {
+describe('スタート地点（rules v0.2 §2.5・§2.6）', () => {
   test('§2.5 スタート地点は四隅の A1・F1・F6・A6', () => {
     expect([...START_CELLS].sort()).toEqual(['A1', 'A6', 'F1', 'F6']);
   });
@@ -105,7 +105,7 @@ describe('スタート地点（rules v0.1 §2.5・§2.6）', () => {
   });
 });
 
-describe('怨霊コマ（rules v0.1 §2.8）', () => {
+describe('怨霊コマ（rules v0.2 §2.8）', () => {
   test('§2.8 怨霊コマの初期位置は C3', () => {
     expect(WRAITH_START).toBe('C3');
   });

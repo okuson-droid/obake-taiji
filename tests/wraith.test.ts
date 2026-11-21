@@ -1,10 +1,10 @@
-// rules v0.1 §7.2(a)（人間が怨霊の部屋に入る接触とペナルティ）、§7.4（接触した手番の獲得判定なし）、
+// rules v0.2 §7.2(a)（人間が怨霊の部屋に入る接触とペナルティ）、§7.4（接触した手番の獲得判定なし）、
 // §7.5（怨霊とお化けチップの重なりの選択）
 import { describe, expect, test } from 'vitest';
 import { applyMove, getOptions } from '../src/game/engine.ts';
 import { overlapConditionHolds } from '../src/game/executor.ts';
 import type { GameState } from '../src/game/types.ts';
-import { P, arrange, cardIds, play, playStill } from './helpers.ts';
+import { P, arrange, cardIds, playStill, playTurn } from './helpers.ts';
 
 /** 席 1 が C4 から北へ進み、C3 の怨霊の部屋に入る局面 */
 const enterWraith = (held: { normal?: number; golden?: number }, extra: Parameters<typeof arrange>[0] = {}) => {
@@ -15,10 +15,10 @@ const enterWraith = (held: { normal?: number; golden?: number }, extra: Paramete
     ...extra,
     seats: { ...extra.seats, 0: { pos: 'C4', facing: 'W', hand: [card], held } },
   });
-  return { s0, s1: applyMove(s0, play(card)) };
+  return { s0, s1: playTurn(s0, card) };
 };
 
-describe('怨霊との接触（rules v0.1 §7.2(a)）', () => {
+describe('怨霊との接触（rules v0.2 §7.2(a)）', () => {
   test('§7.2(a) 1. 駒を自分のスタート地点に戻し、向きを開始時の向きに戻す（R-07）', () => {
     const { s1 } = enterWraith({});
     expect(P(s1, 0).pos).toBe('A1');
@@ -30,7 +30,7 @@ describe('怨霊との接触（rules v0.1 §7.2(a)）', () => {
     const ids = cardIds();
     const card = ids.human('W');
     const s0 = arrange({ turn: 1, chips: [{ cell: 'F3' }], seats: { 1: { pos: 'D3', hand: [card] } } });
-    const s1 = applyMove(s0, play(card));
+    const s1 = playTurn(s0, card);
     expect(P(s1, 1).pos).toBe('F6');
     expect(P(s1, 1).facing).toBe('W');
   });
@@ -66,7 +66,8 @@ describe('怨霊との接触（rules v0.1 §7.2(a)）', () => {
     expect(lostGolden.removedChips).toEqual({ normal: 0, golden: 1 });
     expect(lostGolden.events[0]).toEqual({ type: 'chipLost', seat: 0, kind: 'golden' });
     // 選んだ後は手番の残り（引く・次の手番）が進む。
-    expect(P(lostGolden, 0).hand).toHaveLength(4);
+    // rules v0.2 §4.4・§4.7：1 回目で接触したので 2 回目は行わず、1 枚引いて 6 枚に戻す。
+    expect(P(lostGolden, 0).hand).toHaveLength(6);
     expect(lostGolden.turn).toBe(1);
 
     const lostNormal = applyMove(s1, 'lose:normal');
@@ -80,7 +81,7 @@ describe('怨霊との接触（rules v0.1 §7.2(a)）', () => {
   });
 });
 
-describe('接触した手番の獲得判定（rules v0.1 §4.5・§7.4）', () => {
+describe('接触した手番の獲得判定（rules v0.2 §4.5・§7.4）', () => {
   test('§7.4 接触した手番では、他のプレイヤーも含めて獲得判定を行わない', () => {
     const { s1 } = enterWraith({}, { chips: [{ cell: 'B5' }, { cell: 'A1' }], seats: { 1: { pos: 'B5' } } });
     expect(P(s1, 1).held.normal).toBe(0);
@@ -109,7 +110,7 @@ describe('接触した手番の獲得判定（rules v0.1 §4.5・§7.4）', () =
   });
 });
 
-describe('怨霊とお化けチップの重なり（rules v0.1 §7.5）', () => {
+describe('怨霊とお化けチップの重なり（rules v0.2 §7.5）', () => {
   /** 席 1 の手番を終えると、席 2 の手番の開始時に §7.5 の条件が成り立つ局面 */
   const overlapAtStart = (chips: { cell: 'C3' | 'D4' }[]) => {
     const ids = cardIds();

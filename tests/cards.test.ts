@@ -1,4 +1,4 @@
-// rules v0.1 §2.9・§2.10（カードの総数と内訳）、design.md §3.2（カード ID の割り当て）
+// rules v0.2 §2.9・§2.10（カードの総数と内訳）、design.md §3.2（カード ID の割り当て）
 import { describe, expect, test } from 'vitest';
 import {
   GHOST_CARDS,
@@ -18,7 +18,7 @@ const countBy = <T>(items: readonly T[], key: (x: T) => string): Record<string, 
 const moveKey = (c: MoveCard): string =>
   c.type === 'human' ? `human:${c.kind}` : c.type === 'ghost' ? `ghost:${c.dir}` : 'barrier';
 
-describe('移動カード（rules v0.1 §2.9）', () => {
+describe('移動カード（rules v0.2 §2.9）', () => {
   test('§2.9 合計 180 枚で ID が重複しない', () => {
     expect(MOVE_CARDS).toHaveLength(180);
     expect(new Set(MOVE_CARDS.map((c) => c.id)).size).toBe(180);
@@ -70,7 +70,7 @@ describe('移動カード（rules v0.1 §2.9）', () => {
   });
 });
 
-describe('お化けカード（rules v0.1 §2.10）', () => {
+describe('お化けカード（rules v0.2 §2.10）', () => {
   test('§2.10 合計 30 枚で ID が重複しない', () => {
     expect(GHOST_CARDS).toHaveLength(30);
     expect(new Set(GHOST_CARDS.map((c) => c.id)).size).toBe(30);

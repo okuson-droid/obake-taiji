@@ -1,9 +1,9 @@
-// rules v0.1 §5.4・§5.6（お化け移動カード）、§7.1〜§7.3（怨霊コマの移動と接触）
+// rules v0.2 §5.4・§5.6（お化け移動カード）、§7.1〜§7.3（怨霊コマの移動と接触）
 import { describe, expect, test } from 'vitest';
 import { applyMove, getOptions } from '../src/game/engine.ts';
 import { isCheckpoint } from '../src/game/history.ts';
 import type { Dir, GameState, OptionId } from '../src/game/types.ts';
-import { P, arrange, cardIds, play, type Arrangement } from './helpers.ts';
+import { P, arrange, cardIds, finish, play, type Arrangement } from './helpers.ts';
 
 /** 席 turn がお化け移動カード dir を使い、target を選ぶ。 */
 const ghostMove = (dir: Dir, target: OptionId, a: Arrangement = {}) => {
@@ -12,12 +12,12 @@ const ghostMove = (dir: Dir, target: OptionId, a: Arrangement = {}) => {
   const turn = a.turn ?? 0;
   const s0 = arrange({ ...a, seats: { ...a.seats, [turn]: { ...a.seats?.[turn], hand: [card] } } });
   const mid = applyMove(s0, play(card));
-  return { s0, mid, s1: applyMove(mid, target) };
+  return { s0, mid, s1: finish(applyMove(mid, target)) };
 };
 
 const types = (s: GameState) => s.events.map((e) => e.type);
 
-describe('お化け移動カードの選択肢（rules v0.1 §5.4、design §6.1）', () => {
+describe('お化け移動カードの選択肢（rules v0.2 §5.4、design §6.1）', () => {
   test('§5.4 選択肢はボード上のチップを配置順に並べ、その後に怨霊を置く', () => {
     const { mid } = ghostMove('N', 'ghost:wraith', { chips: [{ cell: 'E5' }, { cell: 'B2', kind: 'golden' }, { cell: 'E5' }] });
     expect(getOptions(mid)).toEqual(['ghost:c1', 'ghost:c2', 'ghost:c3', 'ghost:wraith']);
@@ -39,7 +39,7 @@ describe('お化け移動カードの選択肢（rules v0.1 §5.4、design §6.1
   });
 });
 
-describe('お化けチップの移動（rules v0.1 §5.4・§5.6）', () => {
+describe('お化けチップの移動（rules v0.2 §5.4・§5.6）', () => {
   test('§5.4 選んだチップがカードの方角の隣の部屋へ 1 マス動く', () => {
     const { s1 } = ghostMove('E', 'ghost:c1', { chips: [{ cell: 'B2' }, { cell: 'F6' }] });
     expect(s1.chips.find((c) => c.id === 'c1')?.cell).toBe('C2');
@@ -84,7 +84,7 @@ describe('お化けチップの移動（rules v0.1 §5.4・§5.6）', () => {
   });
 });
 
-describe('怨霊コマの移動（rules v0.1 §7.1・§7.3・§5.6）', () => {
+describe('怨霊コマの移動（rules v0.2 §7.1・§7.3・§5.6）', () => {
   test('§7.1 怨霊コマはお化け移動カードで隣の部屋へ 1 マス動く', () => {
     const { s1 } = ghostMove('S', 'ghost:wraith', { chips: [{ cell: 'F1' }] });
     expect(s1.wraith).toBe('C4');
@@ -128,7 +128,7 @@ describe('怨霊コマの移動（rules v0.1 §7.1・§7.3・§5.6）', () => {
   });
 });
 
-describe('怨霊が駒のいる部屋に入る接触（rules v0.1 §7.2(b)・§7.4）', () => {
+describe('怨霊が駒のいる部屋に入る接触（rules v0.2 §7.2(b)・§7.4）', () => {
   test('§7.2(b) 怨霊コマが駒のいる部屋に入ると接触し、駒はスタート地点・開始時の向きに戻る', () => {
     const { s1 } = ghostMove('E', 'ghost:wraith', { chips: [{ cell: 'F1' }], seats: { 1: { pos: 'D3', facing: 'N' } } });
     expect(s1.wraith).toBe('D3');

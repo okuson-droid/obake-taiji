@@ -1,4 +1,4 @@
-// カードの静的データ（rules v0.1 §2.9・§2.10、design.md §3.2）。
+// カードの静的データ（rules v0.2 §2.9・§2.10、design.md §3.2）。
 // カード ID の割り当ては通信プロトコルの一部であり、変更しない。
 import type { Dir, GhostCard, GhostCardId, HumanCardKind, MoveCard, MoveCardId } from '../game/types.ts';
 
@@ -50,7 +50,7 @@ const buildMoveCards = (): MoveCard[] => {
   return cards;
 };
 
-/** 移動カード 180 枚。ID の昇順（M000〜M179）に並ぶ（rules v0.1 §2.9）。 */
+/** 移動カード 180 枚。ID の昇順（M000〜M179）に並ぶ（rules v0.2 §2.9）。 */
 export const MOVE_CARDS: readonly MoveCard[] = buildMoveCards();
 
 /** ID から移動カードを引く表 */
@@ -58,7 +58,7 @@ export const MOVE_CARD_BY_ID: Readonly<Record<MoveCardId, MoveCard>> = Object.fr
   MOVE_CARDS.map((c) => [c.id, c]),
 );
 
-/** お化けカードの内訳。ID の割り当て順でもある（rules v0.1 §2.10）。 */
+/** お化けカードの内訳。ID の割り当て順でもある（rules v0.2 §2.10）。 */
 const GHOST_CARD_SPEC: readonly { count: number; normal: number; golden: number }[] = [
   { count: 10, normal: 1, golden: 0 }, // G00〜G09：お化け 1 匹
   { count: 10, normal: 2, golden: 0 }, // G10〜G19：お化け 2 匹
@@ -76,7 +76,7 @@ const buildGhostCards = (): GhostCard[] => {
   return cards;
 };
 
-/** お化けカード 30 枚。ID の昇順（G00〜G29）に並ぶ（rules v0.1 §2.10）。 */
+/** お化けカード 30 枚。ID の昇順（G00〜G29）に並ぶ（rules v0.2 §2.10）。 */
 export const GHOST_CARDS: readonly GhostCard[] = buildGhostCards();
 
 /** ID からお化けカードを引く表 */

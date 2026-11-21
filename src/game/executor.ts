@@ -22,22 +22,26 @@ import type {
   Seat,
 } from './types.ts';
 
-/** 1 局の勝利に必要な点数（rules v0.1 §1.3・§6.5） */
+/** 1 局の勝利に必要な点数（rules v0.2 §1.3・§6.5） */
 export const WINNING_SCORE = 10;
-/** 1 回の配置でめくるお化けカードの枚数（rules v0.1 §8.1） */
+/** 1 手番にカードを使う回数（rules v0.2 §4.3） */
+export const ACTIONS_PER_TURN = 2;
+/** 手札の枚数。準備で配る枚数であり、手番の終わりに補充する枚数でもある（rules v0.2 §3.4・§4.7） */
+export const HAND_SIZE = 6;
+/** 1 回の配置でめくるお化けカードの枚数（rules v0.2 §8.1） */
 export const GHOST_CARDS_PER_PLACEMENT = 3;
 
 const emit = (state: GameState, event: GameEvent): void => {
   state.events.push(event);
 };
 
-/** 手番プレイヤーから席番号の順（rules v0.1 §6.2・§7.2）に並べた席の列 */
+/** 手番プレイヤーから席番号の順（rules v0.2 §6.2・§7.2）に並べた席の列 */
 export const seatsFromTurn = (state: GameState): Seat[] => {
   const n = state.config.players;
   return Array.from({ length: n }, (_, i) => ((state.turn + i) % n) as Seat);
 };
 
-/** スタート地点の開始時の向き（rules v0.1 §2.5） */
+/** スタート地点の開始時の向き（rules v0.2 §2.5） */
 const startFacing = (start: Cell) => {
   if (start === 'A1' || start === 'F1' || start === 'F6' || start === 'A6') return START_FACING[start];
   throw new Error(`${start} はスタート地点ではない`);
@@ -54,13 +58,13 @@ export const askPlayCard = (state: GameState): void => {
 };
 
 /**
- * rules v0.1 §7.5 の条件：ボード上にお化けチップが 1 枚以上あり、かつそのすべてが
+ * rules v0.2 §7.5 の条件：ボード上にお化けチップが 1 枚以上あり、かつそのすべてが
  * 怨霊コマと同じ部屋にある。
  */
 export const overlapConditionHolds = (state: GameState): boolean =>
   state.chips.length > 0 && state.chips.every((c) => c.cell === state.wraith);
 
-/** ゲームを終了させる（rules v0.1 §4.9）。残りの命令は捨てる。 */
+/** ゲームを終了させる（rules v0.2 §4.9）。残りの命令は捨てる。 */
 const endGame = (state: GameState, reason: GameResult['reason'], winners: Seat[]): void => {
   const result: GameResult = {
     reason,
@@ -73,7 +77,7 @@ const endGame = (state: GameState, reason: GameResult['reason'], winners: Seat[]
   emit(state, { type: 'gameEnded', result });
 };
 
-/** チップを 1 枚失う（rules v0.1 §7.2 の 2.）。失ったチップはゲームから取り除く。 */
+/** チップを 1 枚失う（rules v0.2 §7.2 の 2.）。失ったチップはゲームから取り除く。 */
 export const loseChip = (state: GameState, seat: Seat, kind: ChipKind): void => {
   const p = playerAt(state, seat);
   if (p.held[kind] <= 0) throw new Error(`席 ${seat + 1} は ${kind} のチップを持っていない`);
@@ -82,7 +86,7 @@ export const loseChip = (state: GameState, seat: Seat, kind: ChipKind): void => 
   emit(state, { type: 'chipLost', seat, kind });
 };
 
-/** カードを使う（rules v0.1 §4.3、design.md §5.3）。手札から捨て札へ移し、効果の命令を積む。 */
+/** カードを使う（rules v0.2 §4.3、design.md §5.3）。手札から捨て札へ移し、効果の命令を積む。 */
 export const playCard = (state: GameState, card: MoveCardId): void => {
   const seat = state.turn;
   const p = playerAt(state, seat);
@@ -90,23 +94,24 @@ export const playCard = (state: GameState, card: MoveCardId): void => {
   if (index < 0) throw new Error(`${card} は席 ${seat + 1} の手札にない`);
   p.hand.splice(index, 1);
   state.moveDiscard.push(card);
+  state.actionsTaken += 1;
   emit(state, { type: 'cardPlayed', seat, card });
 
   const def = MOVE_CARD_BY_ID[card];
   if (def === undefined) throw new Error(`${card} は存在しないカードである`);
-  // 1 手番の標準の命令列（design.md §3.5）。カードの効果を解決する命令は、この前に積む。
-  const rest: Instr[] = [{ op: 'judge' }, { op: 'refillIfEmpty' }, { op: 'draw', seat }, { op: 'endTurn' }];
+  // 効果を解決した後に、2 回目へ進むか手番の終わりへ進むかを決める（rules v0.2 §4.3・§4.4）。
+  const rest: Instr[] = [{ op: 'nextAction' }];
   switch (def.type) {
     case 'human':
       state.effectQueue.unshift({ op: 'moveHuman', seat, card }, ...rest);
       return;
     case 'ghost':
-      // 対象を選ぶまで手番の残りを待たせる（rules v0.1 §5.4、design.md §5.3）。
+      // 対象を選ぶまで手番の残りを待たせる（rules v0.2 §5.4、design.md §5.3）。
       state.effectQueue.unshift(...rest);
       state.pending = { kind: 'ghostTarget', player: seat, card, options: ghostTargetOptions(state) };
       return;
     case 'barrier':
-      // 対象を選ぶまで手番の残りを待たせる（rules v0.1 §5.5、design.md §5.3）。
+      // 対象を選ぶまで手番の残りを待たせる（rules v0.2 §5.5、design.md §5.3）。
       state.effectQueue.unshift(...rest);
       state.pending = { kind: 'barrierTarget', player: seat, card, options: barrierTargetOptions(state) };
       return;
@@ -135,6 +140,7 @@ const execStartTurn = (state: GameState): void => {
   // design.md §5.2
   emit(state, { type: 'turnStarted', seat: state.turn, turnNo: state.turnNo });
   state.contactThisTurn = false;
+  state.actionsTaken = 0;
   if (overlapConditionHolds(state)) {
     state.pending = {
       kind: 'overlapChoice',
@@ -147,7 +153,7 @@ const execStartTurn = (state: GameState): void => {
 };
 
 const execMoveHuman = (state: GameState, seat: Seat, card: MoveCardId): void => {
-  // rules v0.1 §5.1・§5.3、design.md §5.4
+  // rules v0.2 §5.1・§5.3、design.md §5.4
   const p = playerAt(state, seat);
   const from = p.pos;
   const preview = previewHumanMove(state, seat, card);
@@ -160,17 +166,17 @@ const execMoveHuman = (state: GameState, seat: Seat, card: MoveCardId): void => 
 };
 
 const execMoveGhost = (state: GameState, target: ChipId | 'wraith', dir: Dir): void => {
-  // rules v0.1 §5.4・§5.6・§7.1〜§7.3、design.md §5.5。お化けチップと怨霊コマは通せん棒を無視する。
+  // rules v0.2 §5.4・§5.6・§7.1〜§7.3、design.md §5.5。お化けチップと怨霊コマは通せん棒を無視する。
   if (target === 'wraith') {
     const from = state.wraith;
     const to = neighbor(from, dir);
-    // 外周の壁、または行き先がスタート地点なら動かない（rules v0.1 §7.3、R-08）。
+    // 外周の壁、または行き先がスタート地点なら動かない（rules v0.2 §7.3、R-08）。
     const blocked = to === null || START_CELLS.includes(to);
     const dest = blocked ? from : to;
     state.wraith = dest;
     emit(state, { type: 'wraithMoved', from, to: dest, blocked });
     if (blocked) return;
-    // 動いた先にプレイヤー駒がいれば、その全員と接触する（rules v0.1 §7.2(b)）。
+    // 動いた先にプレイヤー駒がいれば、その全員と接触する（rules v0.2 §7.2(b)）。
     const seats = state.players.filter((p) => p.pos === dest).map((p) => p.seat);
     if (seats.length > 0) state.effectQueue.unshift({ op: 'contact', seats });
     return;
@@ -179,27 +185,27 @@ const execMoveGhost = (state: GameState, target: ChipId | 'wraith', dir: Dir): v
   if (chip === undefined) throw new Error(`チップ ${target} はボード上にない`);
   const from = chip.cell;
   const to = neighbor(from, dir);
-  // 外周の壁の方角なら動かない（rules v0.1 §5.4、R-03）。
+  // 外周の壁の方角なら動かない（rules v0.2 §5.4、R-03）。
   chip.cell = to ?? from;
   emit(state, { type: 'ghostMoved', chip: chip.id, from, to: chip.cell, blocked: to === null });
 };
 
 const execPlaceBarrier = (state: GameState, edge: EdgeId): void => {
-  // rules v0.1 §5.5(a)。barriers は昇順に保つ。
+  // rules v0.2 §5.5(a)。barriers は昇順に保つ。
   if (!canPlaceBarrier(state, edge)) throw new Error(`辺 ${edge} には通せん棒を設置できない`);
   state.barriers = [...state.barriers, edge].sort();
   emit(state, { type: 'barrierPlaced', edge });
 };
 
 const execRemoveBarrier = (state: GameState, edge: EdgeId): void => {
-  // rules v0.1 §5.5(b)。誰が設置した通せん棒でもよい。
+  // rules v0.2 §5.5(b)。誰が設置した通せん棒でもよい。
   if (!state.barriers.includes(edge)) throw new Error(`辺 ${edge} に通せん棒はない`);
   state.barriers = state.barriers.filter((e) => e !== edge);
   emit(state, { type: 'barrierRemoved', edge });
 };
 
 const execContact = (state: GameState, seats: Seat[]): void => {
-  // rules v0.1 §7.2、design.md §5.6。手番プレイヤーから席番号の順に処理する（R-17）。
+  // rules v0.2 §7.2、design.md §5.6。手番プレイヤーから席番号の順に処理する（R-17）。
   const ordered = seatsFromTurn(state).filter((s) => seats.includes(s));
   emit(state, { type: 'contact', seats: ordered });
   state.contactThisTurn = true;
@@ -213,7 +219,7 @@ const execContact = (state: GameState, seats: Seat[]): void => {
 };
 
 const execPenalty = (state: GameState, seat: Seat): void => {
-  // rules v0.1 §7.2 の 2.、design.md §5.7、decisions.md U-06
+  // rules v0.2 §7.2 の 2.、design.md §5.7、decisions.md U-06
   const { normal, golden } = playerAt(state, seat).held;
   if (normal === 0 && golden === 0) {
     emit(state, { type: 'chipLost', seat, kind: null });
@@ -227,19 +233,37 @@ const execPenalty = (state: GameState, seat: Seat): void => {
 };
 
 const execPurgeOverlap = (state: GameState): void => {
-  // rules v0.1 §7.5(b)：怨霊コマと同じ部屋のチップをすべてゲームから取り除く。
+  // rules v0.2 §7.5(b)：怨霊コマと同じ部屋のチップをすべてゲームから取り除く。
   const purged = chipsAt(state, state.wraith);
   state.chips = state.chips.filter((c) => c.cell !== state.wraith);
   for (const chip of purged) state.removedChips[chip.kind] += 1;
   emit(state, { type: 'overlapPurged', chips: purged.map((c) => c.id) });
 };
 
+const execNextAction = (state: GameState): void => {
+  // rules v0.2 §4.3〜§4.7。2 回使い終えたか、接触が起きていれば（誰の接触でも、R-21）手番の終わりの処理へ進む。
+  // 手番の終わり：獲得判定 → お化けの補充 → 手札を 6 枚まで 1 枚ずつ引く → 次の手番。
+  if (state.contactThisTurn || state.actionsTaken >= ACTIONS_PER_TURN) {
+    const seat = state.turn;
+    const draws = Math.max(0, HAND_SIZE - playerAt(state, seat).hand.length);
+    state.effectQueue.unshift(
+      { op: 'judge' },
+      { op: 'refillIfEmpty' },
+      ...Array.from({ length: draws }, (): Instr => ({ op: 'draw', seat })),
+      { op: 'endTurn' },
+    );
+    return;
+  }
+  // 2 回目：§7.5 の重なりは手番の始めにだけ確かめる（R-23）ため、そのままカードの使用へ進む。
+  askPlayCard(state);
+};
+
 const execJudge = (state: GameState): void => {
-  // rules v0.1 §6・§4.5・§7.4、design.md §5.8
+  // rules v0.2 §6・§4.5・§7.4、design.md §5.8。手番の中で接触があれば行わない。
   if (state.contactThisTurn) return;
   for (const seat of seatsFromTurn(state)) {
     const p = playerAt(state, seat);
-    // 怨霊コマがいる部屋のチップは獲得できない（rules v0.1 §6.3）。
+    // 怨霊コマがいる部屋のチップは獲得できない（rules v0.2 §6.3）。
     if (p.pos === state.wraith) continue;
     const got = chipsAt(state, p.pos);
     if (got.length === 0) continue;
@@ -250,7 +274,7 @@ const execJudge = (state: GameState): void => {
       points += chip.kind === 'golden' ? 3 : 1;
     }
     emit(state, { type: 'acquired', seat, chips: got.map((c) => c.id), points });
-    // 判定の途中で 10 点以上になったら、その場で終了する（rules v0.1 §6.5・§9.1、R-11・R-16）。
+    // 判定の途中で 10 点以上になったら、その場で終了する（rules v0.2 §6.5・§9.1、R-11・R-16）。
     if (pointsOf(p.held) >= WINNING_SCORE) {
       endGame(state, 'score', [seat]);
       return;
@@ -259,24 +283,24 @@ const execJudge = (state: GameState): void => {
 };
 
 const execRefillIfEmpty = (state: GameState): void => {
-  // rules v0.1 §4.6
+  // rules v0.2 §4.6
   if (state.chips.length === 0) state.effectQueue.unshift({ op: 'place' });
 };
 
 const execPlace = (state: GameState): void => {
-  // rules v0.1 §8、design.md §5.9・§6.2
+  // rules v0.2 §8、design.md §5.9・§6.2
   const revealed = state.ghostDeck.splice(0, GHOST_CARDS_PER_PLACEMENT);
   state.ghostDiscard.push(...revealed);
   emit(state, { type: 'ghostCardsRevealed', cards: revealed });
   if (state.ghostDeck.length === 0) {
-    // めくった結果山札が 0 枚になったら、配置せずに終了する（rules v0.1 §8.2・§9.2、R-12・R-13）。
+    // めくった結果山札が 0 枚になったら、配置せずに終了する（rules v0.2 §8.2・§9.2、R-12・R-13）。
     const scores = state.players.map((p) => pointsOf(p.held));
     const best = Math.max(...scores);
     const winners = state.players.filter((p) => pointsOf(p.held) === best).map((p) => p.seat);
     endGame(state, 'ghostDeck', winners);
     return;
   }
-  // めくった順にカードを処理し、1 枚の中では記載された匹数分を続けて配置する（rules v0.1 §8.3）。
+  // めくった順にカードを処理し、1 枚の中では記載された匹数分を続けて配置する（rules v0.2 §8.3）。
   for (const id of revealed) {
     const card = GHOST_CARD_BY_ID[id];
     if (card === undefined) throw new Error(`${id} は存在しないお化けカードである`);
@@ -301,7 +325,7 @@ const execPlace = (state: GameState): void => {
 };
 
 const execDraw = (state: GameState, seat: Seat): void => {
-  // rules v0.1 §4.7、design.md §5.10
+  // rules v0.2 §4.7、design.md §5.10
   if (state.moveDeck.length === 0) {
     const [deck, rng] = shuffle(state.moveDiscard, state.rng);
     state.moveDeck = deck;
@@ -316,7 +340,7 @@ const execDraw = (state: GameState, seat: Seat): void => {
 };
 
 const execEndTurn = (state: GameState): void => {
-  // rules v0.1 §4.1・§4.8
+  // rules v0.2 §4.1・§4.8
   state.turn = ((state.turn + 1) % state.config.players) as Seat;
   state.turnNo += 1;
   state.effectQueue.unshift({ op: 'startTurn' });
@@ -334,6 +358,8 @@ const exec = (state: GameState, instr: Instr): void => {
       return execPenalty(state, instr.seat);
     case 'purgeOverlap':
       return execPurgeOverlap(state);
+    case 'nextAction':
+      return execNextAction(state);
     case 'judge':
       return execJudge(state);
     case 'refillIfEmpty':

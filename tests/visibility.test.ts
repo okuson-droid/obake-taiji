@@ -1,10 +1,10 @@
-// design.md §4.6（maskEvents）。rules v0.1 §3.4（手札は持ち主以外に非公開、R-15）に対応する。
+// design.md §4.6（maskEvents）。rules v0.2 §3.4（手札は持ち主以外に非公開、R-15）に対応する。
 import { describe, expect, test } from 'vitest';
 import { applyMove, createGame, getOptions } from '../src/game/engine.ts';
 import { maskEvents } from '../src/game/visibility.ts';
 import type { GameEvent } from '../src/game/types.ts';
 
-describe('maskEvents（design §4.6、rules v0.1 §3.4）', () => {
+describe('maskEvents（design §4.6、rules v0.2 §3.4）', () => {
   const events: GameEvent[] = [
     { type: 'cardPlayed', seat: 0, card: 'M001' },
     { type: 'cardDrawn', seat: 0, card: 'M050' },

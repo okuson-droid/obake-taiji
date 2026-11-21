@@ -242,6 +242,12 @@ export const GameScreen = (p: GameScreenProps) => {
           </span>
           <span className="prompt" data-testid="prompt">
             {active ? PROMPTS[pending.kind] : `${seatName(pending.player)} が選んでいます。お待ちください`}
+            {/* 1 手番に 2 回カードを使う（rules v0.2 §4.3）。いま何回目かを示す。 */}
+            {active && (pending.kind === 'playCard' || pending.kind === 'ghostTarget' || pending.kind === 'barrierTarget') && (
+              <span className="action-count" data-testid="action-count">
+                {pending.kind === 'playCard' ? state.actionsTaken + 1 : state.actionsTaken} 回目／2 回
+              </span>
+            )}
             {active && pendingCard !== null && <>（{cardFullName(pendingCard)}）</>}
           </span>
         </header>

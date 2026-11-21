@@ -1,11 +1,11 @@
-// rules v0.1 §5.5・§5.6（通せん棒カード）、§2.3（1 つの辺に 1 本まで）、design §5.11・§6.1
+// rules v0.2 §5.5・§5.6（通せん棒カード）、§2.3（1 つの辺に 1 本まで）、design §5.11・§6.1
 import { describe, expect, test } from 'vitest';
 import { EDGE_IDS } from '../src/data/board.ts';
 import { isConnected } from '../src/game/board-ops.ts';
 import { applyMove, getOptions } from '../src/game/engine.ts';
 import { canPlaceBarrier, placeableEdges } from '../src/game/queries.ts';
 import type { EdgeId, OptionId } from '../src/game/types.ts';
-import { P, arrange, cardIds, play } from './helpers.ts';
+import { P, arrange, cardIds, finish, play } from './helpers.ts';
 
 const withBarrierCard = (barriers: EdgeId[]) => {
   const ids = cardIds();
@@ -14,7 +14,7 @@ const withBarrierCard = (barriers: EdgeId[]) => {
   return { s0, mid: applyMove(s0, play(card)) };
 };
 
-describe('通せん棒カードの選択肢（rules v0.1 §5.5、design §6.1）', () => {
+describe('通せん棒カードの選択肢（rules v0.2 §5.5、design §6.1）', () => {
   test('§5.5 通せん棒がなければ 60 本すべてに設置でき、撤去の選択肢はない', () => {
     const { mid } = withBarrierCard([]);
     expect(getOptions(mid)).toEqual(EDGE_IDS.map((e) => `barrier:place:${e}`));
@@ -54,14 +54,18 @@ describe('通せん棒カードの選択肢（rules v0.1 §5.5、design §6.1）
   });
 });
 
-describe('通せん棒の設置と撤去（rules v0.1 §5.5）', () => {
+describe('通せん棒の設置と撤去（rules v0.2 §5.5）', () => {
   test('§5.5(a) 選んだ辺に設置し、barriers は昇順に保つ', () => {
     const { mid } = withBarrierCard(['S:D2', 'E:B5']);
     const s1 = applyMove(mid, 'barrier:place:E:D4');
     expect(s1.barriers).toEqual(['E:B5', 'E:D4', 'S:D2']);
     expect(s1.events).toContainEqual({ type: 'barrierPlaced', edge: 'E:D4' });
-    expect(s1.turn).toBe(1);
-    expect(P(s1, 0).hand).toHaveLength(4);
+    // rules v0.2 §4.3：設置の後は 2 回目の行動に進む。
+    expect(s1.pending?.kind).toBe('playCard');
+    expect(P(s1, 0).hand).toHaveLength(5);
+    const s2 = finish(s1);
+    expect(s2.turn).toBe(1);
+    expect(P(s2, 0).hand).toHaveLength(6);
   });
 
   test('§5.5(b) 置かれている通せん棒を 1 本取り除く（誰が置いたものでもよい）', () => {
@@ -69,7 +73,7 @@ describe('通せん棒の設置と撤去（rules v0.1 §5.5）', () => {
     const s1 = applyMove(mid, 'barrier:remove:S:D2');
     expect(s1.barriers).toEqual(['E:B5']);
     expect(s1.events).toContainEqual({ type: 'barrierRemoved', edge: 'S:D2' });
-    expect(s1.turn).toBe(1);
+    expect(finish(s1).turn).toBe(1);
   });
 
   test('§5.5 選択肢にない辺（連結条件に反する辺・盤外の ID）を選ぶと例外を投げる', () => {
@@ -81,7 +85,7 @@ describe('通せん棒の設置と撤去（rules v0.1 §5.5）', () => {
 
   test('§5.6 設置した通せん棒はプレイヤー駒の移動を妨げる', () => {
     const { mid } = withBarrierCard([]);
-    const s1 = applyMove(mid, 'barrier:place:E:E6');
+    const s1 = finish(applyMove(mid, 'barrier:place:E:E6'));
     // 席 2（F6、向き西）が「前」で西へ進もうとしても E6 へは入れない。
     const ids = cardIds();
     const card = ids.human('front');
@@ -94,7 +98,7 @@ describe('通せん棒の設置と撤去（rules v0.1 §5.5）', () => {
   });
 });
 
-describe('canPlaceBarrier・placeableEdges（design §4.5、rules v0.1 §5.5）', () => {
+describe('canPlaceBarrier・placeableEdges（design §4.5、rules v0.2 §5.5）', () => {
   test('§5.5 placeableEdges は連結条件を満たす空き辺を昇順に返す', () => {
     const s = arrange({ barriers: ['E:A1'] });
     const edges = placeableEdges(s);

@@ -1,4 +1,4 @@
-// 非公開情報の伏せ処理（design.md §4.6、rules v0.1 §3.4、decisions.md R-15）。
+// 非公開情報の伏せ処理（design.md §4.6、rules v0.2 §3.4、decisions.md R-15）。
 // 他人の手札は枚数だけを UI に渡し、カード ID・種類を画面と DOM に出さない。
 import type { GameEvent, Seat } from './types.ts';
 

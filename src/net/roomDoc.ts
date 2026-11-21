@@ -22,7 +22,7 @@ export const normalizeName = (name: string): string => name.trim().slice(0, NAME
 /** 部屋を作る。席 1 に作成者を座らせる（design.md §7.5）。 */
 export const newRoomDoc = (config: GameConfig, seed: number, host: string, name: string): RoomDoc => ({
   schema: 1,
-  rulesVersion: '0.1',
+  rulesVersion: '0.2',
   status: 'lobby',
   host,
   config: { players: config.players },

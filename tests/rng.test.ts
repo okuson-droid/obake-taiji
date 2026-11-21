@@ -1,5 +1,5 @@
 // design.md §6.2（乱数の消費順）、decisions.md D-03（mulberry32）
-// rules v0.1 §3.4・§3.5（シャッフル）、§8.3（ダイス）で使う乱数の決定性を確かめる。
+// rules v0.2 §3.4・§3.5（シャッフル）、§8.3（ダイス）で使う乱数の決定性を確かめる。
 import { describe, expect, test } from 'vitest';
 import { next, rollDie, seedToState, shuffle } from '../src/game/rng.ts';
 
@@ -64,7 +64,7 @@ describe('mulberry32（design §6.2）', () => {
   });
 });
 
-describe('シャッフル（design §6.2、rules v0.1 §3.4・§3.5）', () => {
+describe('シャッフル（design §6.2、rules v0.2 §3.4・§3.5）', () => {
   const items = Array.from({ length: 180 }, (_, i) => i);
 
   test('同じシードで同じ結果、異なるシードで異なる結果になる', () => {
@@ -102,7 +102,7 @@ describe('シャッフル（design §6.2、rules v0.1 §3.4・§3.5）', () => {
   });
 });
 
-describe('ダイス（design §6.2、rules v0.1 §8.3）', () => {
+describe('ダイス（design §6.2、rules v0.2 §8.3）', () => {
   test('出目は 1〜6 の整数で、6 種類すべてが出る', () => {
     let s = seedToState(2026);
     const seen = new Set<number>();

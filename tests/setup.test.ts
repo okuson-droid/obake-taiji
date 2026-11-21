@@ -1,4 +1,4 @@
-// rules v0.1 §3（ゲームの準備）、§2.6（スタート地点の割り当て）、design.md §5.1・§6.2（準備の乱数の消費順）
+// rules v0.2 §3（ゲームの準備）、§2.6（スタート地点の割り当て）、design.md §5.1・§6.2（準備の乱数の消費順）
 import { describe, expect, test } from 'vitest';
 import { START_ASSIGNMENT, START_FACING } from '../src/data/board.ts';
 import { GHOST_CARDS, GHOST_CARD_BY_ID, MOVE_CARDS } from '../src/data/cards.ts';
@@ -9,7 +9,7 @@ import { P } from './helpers.ts';
 
 const counts: GameConfig['players'][] = [2, 3, 4];
 
-describe('準備（rules v0.1 §3）', () => {
+describe('準備（rules v0.2 §3）', () => {
   for (const n of counts) {
     test(`§3.2 ${n} 人：駒は自分のスタート地点に開始時の向きで置かれる（§2.5・§2.6）`, () => {
       const s = createGame({ players: n }, 1);
@@ -24,10 +24,10 @@ describe('準備（rules v0.1 §3）', () => {
       });
     });
 
-    test(`§3.4 ${n} 人：各プレイヤーに 4 枚ずつ配られ、山札は 180−4×${n} 枚になる`, () => {
+    test(`§3.4 ${n} 人：各プレイヤーに 6 枚ずつ配られ、山札は 180−6×${n} 枚になる（rules v0.2）`, () => {
       const s = createGame({ players: n }, 2);
-      for (const p of s.players) expect(p.hand).toHaveLength(4);
-      expect(s.moveDeck).toHaveLength(180 - 4 * n);
+      for (const p of s.players) expect(p.hand).toHaveLength(6);
+      expect(s.moveDeck).toHaveLength(180 - 6 * n);
       expect(s.moveDiscard).toEqual([]);
       const all = [...s.moveDeck, ...s.players.flatMap((p) => p.hand)];
       expect([...all].sort()).toEqual(MOVE_CARDS.map((c) => c.id).sort());
@@ -69,7 +69,8 @@ describe('準備（rules v0.1 §3）', () => {
     expect(s.barriers).toEqual([]);
     expect(s.removedChips).toEqual({ normal: 0, golden: 0 });
     expect(s.effectQueue).toEqual([]);
-    expect(s.rulesVersion).toBe('0.1');
+    expect(s.rulesVersion).toBe('0.2');
+    expect(s.actionsTaken).toBe(0);
     expect(s.seed).toBe(5);
   });
 
@@ -81,11 +82,11 @@ describe('準備（rules v0.1 §3）', () => {
       const [moveDeck, r1] = shuffle(MOVE_CARDS.map((c) => c.id), rng);
       const [ghostDeck, r2] = shuffle(GHOST_CARDS.map((c) => c.id), r1);
       rng = r2;
-      // 4 巡、席 1 から順に 1 枚ずつ配る。
+      // 6 巡、席 1 から順に 1 枚ずつ配る（rules v0.2 §3.4）。
       s.players.forEach((p, i) => {
-        expect(p.hand).toEqual([0, 1, 2, 3].map((round) => moveDeck[round * n + i]));
+        expect(p.hand).toEqual([0, 1, 2, 3, 4, 5].map((round) => moveDeck[round * n + i]));
       });
-      expect(s.moveDeck).toEqual(moveDeck.slice(4 * n));
+      expect(s.moveDeck).toEqual(moveDeck.slice(6 * n));
       // 先頭の 3 枚をめくり、めくった順・カードの中では匹数分を続けて配置する。
       expect(s.ghostDiscard).toEqual(ghostDeck.slice(0, 3));
       expect(s.ghostDeck).toEqual(ghostDeck.slice(3));

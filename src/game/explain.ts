@@ -21,7 +21,7 @@ export const explain = (state: GameState, viewer: Seat, element: Target): string
   const pending = state.pending;
   if (pending === null) return 'いまは選べません';
   if (pending.player !== viewer) {
-    // 手番プレイヤー以外のペナルティ（rules v0.1 §7.2(b)）を待っている場合を区別する。
+    // 手番プレイヤー以外のペナルティ（rules v0.2 §7.2(b)）を待っている場合を区別する。
     return pending.player === state.turn
       ? `席 ${pending.player + 1} の手番です`
       : `席 ${pending.player + 1} の選択を待っています`;

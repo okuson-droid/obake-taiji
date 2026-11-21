@@ -6,7 +6,7 @@ export type SeatEntry = { uid: string; name: string };
 /** 1 ゲーム＝1 行（rooms テーブル）の doc 列（design.md §7.1） */
 export type RoomDoc = {
   schema: 1;
-  rulesVersion: '0.1';
+  rulesVersion: '0.2';
   status: 'lobby' | 'playing' | 'ended';
   /** 作成者の uid */
   host: string;
