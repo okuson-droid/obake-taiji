@@ -52,7 +52,7 @@ export const snapshot = (page: Page): Promise<Snapshot> =>
     const own = new Set(
       [...document.querySelectorAll('[data-option^="play:"]')].map((e) => e.getAttribute('data-option')!.slice(5)),
     );
-    const ids = document.documentElement.outerHTML.match(/M\d{3}/g) ?? [];
+    const ids = /* 画面は body の中だけにある。head には埋め込んだスクリプトがあり、調べる必要がない。 */ document.body.outerHTML.match(/M\d{3}/g) ?? [];
     return {
       screen,
       options: document.querySelectorAll('[data-option]').length,

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { ArtDefs } from './assets/art.tsx';
 import { LocalGame } from './LocalGame.tsx';
+import { OnlineRoom } from './OnlineRoom.tsx';
 import { Top } from './Top.tsx';
 import { localHash, parseRoute, randomSeed } from './route.ts';
 
@@ -28,6 +29,8 @@ export const App = () => {
   let screen = <Top />;
   if (route.name === 'local') {
     screen = route.seed === null ? <></> : <LocalGame key={`${route.players}:${route.seed}`} players={route.players} seed={route.seed} />;
+  } else if (route.name === 'room') {
+    screen = <OnlineRoom key={route.code} code={route.code} />;
   }
   return (
     <>

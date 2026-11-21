@@ -8,6 +8,8 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  # Variables を登録・変更した後に、コミットなしで公開をやり直せるようにする（deploy/README.md の手順 6）。
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,12 +22,12 @@ concurrency:
 
 jobs:
   build:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: 24

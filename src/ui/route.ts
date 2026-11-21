@@ -1,11 +1,15 @@
 // 画面の経路（design.md §7.5）。経路はハッシュで表す。
-// #/ はトップ、#/local/<人数> はローカル対戦である。?seed=<数> でシードを指定できる（decisions.md D-17）。
+// #/ はトップ、#/local/<人数> はローカル対戦、#/room/<部屋コード> はオンライン対戦である。
+// ローカル対戦は ?seed=<数> でシードを指定できる（decisions.md D-17）。
 import type { GameConfig } from '../game/types.ts';
 
-export type Route = { name: 'top' } | { name: 'local'; players: GameConfig['players']; seed: number | null };
+export type Route =
+  | { name: 'top' }
+  | { name: 'local'; players: GameConfig['players']; seed: number | null }
+  | { name: 'room'; code: string };
 
 /** シードとして受け付ける文字列（0 以上 2^32 未満の 10 進整数） */
-const parseSeed = (text: string | null): number | null => {
+export const parseSeed = (text: string | null): number | null => {
   if (text === null || !/^\d{1,10}$/.test(text)) return null;
   const n = Number(text);
   return n < 2 ** 32 ? n : null;
@@ -19,6 +23,8 @@ const parseSeed = (text: string | null): number | null => {
 export const parseRoute = (hash: string, search = ''): Route => {
   const body = hash.replace(/^#/, '');
   const [path = '', hashQuery = ''] = body.split('?', 2);
+  const room = /^\/room\/([A-Z0-9]{6})\/?$/.exec(path);
+  if (room !== null) return { name: 'room', code: room[1]! };
   const m = /^\/local\/([234])\/?$/.exec(path);
   if (m === null) return { name: 'top' };
   const seed =
@@ -29,6 +35,9 @@ export const parseRoute = (hash: string, search = ''): Route => {
 /** ローカル対戦のハッシュを作る。 */
 export const localHash = (players: GameConfig['players'], seed?: number): string =>
   seed === undefined ? `#/local/${players}` : `#/local/${players}?seed=${seed}`;
+
+/** オンライン対戦の部屋のハッシュ。偽 DB の指定など、ハッシュ内のクエリは引き継ぐ。 */
+export const roomHash = (code: string, keepQuery = ''): string => (keepQuery === '' ? `#/room/${code}` : `#/room/${code}?${keepQuery}`);
 
 /** ブラウザの暗号論的乱数でシードを作る（decisions.md D-17）。 */
 export const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;

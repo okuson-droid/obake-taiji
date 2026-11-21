@@ -4,5 +4,7 @@ export {};
 declare global {
   interface Window {
     __fallbackCount: number;
+    /** 偽 DB での同期検査のために公開するオンライン対戦の局面（JSON）。偽 DB のときだけ設定する。 */
+    __obakeState?: string;
   }
 }

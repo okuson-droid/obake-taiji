@@ -53,9 +53,37 @@ describe('src/ui の制約（CLAUDE.md：ルールを再実装しない）', () 
     }
   });
 
-  test('src/net を import せず、Math.random を使わない', () => {
+  test('Math.random を使わない（シードと部屋コードは crypto.getRandomValues、D-03・D-17）', () => {
     for (const [path, text] of Object.entries(uiSources)) {
-      expect(text, `${path} が src/net を import している`).not.toMatch(/from\s*['"][^'"]*\/net\//);
+      expect(text, `${path} が Math.random を使っている`).not.toMatch(/Math\s*\.\s*random/);
+    }
+  });
+});
+
+const netSources = import.meta.glob<string>('../src/net/**/*.{ts,tsx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+describe('src/net の制約（design.md §2）', () => {
+  test('検査対象のファイルがある', () => {
+    expect(Object.keys(netSources).length).toBeGreaterThan(0);
+  });
+
+  test('src/ui を import せず、src/game は公開 API（engine・history・types）だけを import する', () => {
+    for (const [path, text] of Object.entries(netSources)) {
+      for (const m of text.matchAll(/from\s*['"]([^'"]+)['"]/g)) {
+        const spec = m[1] ?? '';
+        expect(spec, `${path} が ${spec} を import している`).not.toMatch(/(^|\/)ui\//);
+        const game = /\/game\/([\w-]+)\.ts$/.exec(spec);
+        if (game !== null) expect(['engine', 'history', 'types'], `${path} が ${spec} を import している`).toContain(game[1]);
+      }
+    }
+  });
+
+  test('Math.random を使わない', () => {
+    for (const [path, text] of Object.entries(netSources)) {
       expect(text, `${path} が Math.random を使っている`).not.toMatch(/Math\s*\.\s*random/);
     }
   });

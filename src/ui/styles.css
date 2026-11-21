@@ -607,3 +607,80 @@ span.held-chip {
   color: var(--muted);
   border-style: dashed;
 }
+
+/* ---- オンライン対戦 ---- */
+.top-section form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.top-section label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input {
+  font: inherit;
+  min-height: 44px;
+  border-radius: 6px;
+  border: 1.5px solid var(--panel-edge);
+  background: var(--wall);
+  color: var(--text);
+  padding: 6px 10px;
+}
+
+input:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.action.chosen {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.enter-room {
+  border-top: 1px solid var(--panel-edge);
+  padding-top: 12px;
+}
+
+.lobby .seats {
+  margin-bottom: 12px;
+}
+
+.invite {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.online-bar {
+  max-width: 520px;
+  margin: 8px auto 0;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (min-width: 960px) {
+  .online-bar {
+    max-width: 960px;
+  }
+}
+
+.names {
+  list-style: none;
+  padding: 0;
+  color: var(--muted);
+}
