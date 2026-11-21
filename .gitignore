@@ -4,3 +4,4 @@ test-results/
 playwright-report/
 .vitest/
 e2e-screenshots/
+pw.local.config.ts
