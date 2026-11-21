@@ -1,6 +1,7 @@
 # GitHub Pages への公開（design.md §10.2、decisions.md D-16）。
 # main への push で CI が成功した後に、その版をビルドして公開する。
-# Supabase の値はリポジトリの Variables から渡す。未設定なら空文字になり、オンライン対戦の入口が隠れる（D-08）。
+# Firebase の設定はリポジトリの Variables から渡す。未設定なら空文字になり、オンライン対戦の入口が隠れる（D-08 の考え方）。
+# いずれもブラウザに公開してよい値であり、守りは Security Rules（deploy/firebase.rules.json）が担う。
 name: Deploy
 
 on:
@@ -35,8 +36,10 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_DATABASE_URL: ${{ vars.FIREBASE_DATABASE_URL }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist

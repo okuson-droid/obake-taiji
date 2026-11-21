@@ -20,10 +20,7 @@ export type RoomDoc = {
   moves: OptionId[];
 };
 
-/**
- * 版の数え方：部屋がまだないときは 0、作った直後は 1 とし、書き込みのたびに 1 増える。
- * Supabase の rooms.version 列は作った直後が 0 なので、列の値＋1 をこの版とする。
- */
+/** 版の数え方：部屋がまだないときは 0、作った直後は 1 とし、書き込みのたびに 1 増える。 */
 export type WriteResult = { ok: true; version: number } | { ok: false };
 
 export interface Room {

@@ -1,5 +1,5 @@
 // トップ画面（design.md §7.5）。ローカル対戦の入口と、オンライン対戦の入口（部屋を作る・部屋に入る）を出す。
-// オンライン対戦の入口は、Supabase の設定がなければ隠す（decisions.md D-08）。偽 DB（?db=fake）のときは出す。
+// オンライン対戦の入口は、Firebase の設定がなければ隠す（decisions.md D-08 の考え方）。偽 DB（?db=fake）のときは出す。
 import { useState } from 'react';
 import type { GameConfig } from '../game/types.ts';
 import { connect, fakeDbRequested, onlineAvailable } from '../net/index.ts';

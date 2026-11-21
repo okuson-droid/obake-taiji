@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$code": {
+        ".read": "auth !== null && $code.matches(/^[A-Z0-9]{6}$/)",
+        ".write": "auth !== null && $code.matches(/^[A-Z0-9]{6}$/) && ((!data.exists() && newData.child('version').val() === 1 && newData.child('host').val() === auth.uid && newData.child('seatUids').child(auth.uid).val() === true) || (data.exists() && !newData.exists() && data.child('host').val() === auth.uid) || (data.exists() && newData.exists() && newData.child('version').val() === data.child('version').val() + 1 && newData.child('host').val() === data.child('host').val() && (data.child('status').val() === 'lobby' || data.child('seatUids').child(auth.uid).val() === true)))",
+        ".validate": "newData.hasChildren(['doc', 'version', 'host', 'status', 'seatUids'])",
+        "doc": { ".validate": "newData.isString() && newData.val().length <= 200000" },
+        "version": { ".validate": "newData.isNumber()" },
+        "host": { ".validate": "newData.isString()" },
+        "status": { ".validate": "newData.val() === 'lobby' || newData.val() === 'playing' || newData.val() === 'ended'" },
+        "seatUids": { "$uid": { ".validate": "newData.val() === true" } },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

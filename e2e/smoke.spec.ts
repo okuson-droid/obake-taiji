@@ -9,8 +9,8 @@ for (const width of [375, 1280]) {
     await page.goto(appUrl('#/'));
     await expect(page).toHaveTitle('お化け退治');
     for (const n of [2, 3, 4]) await expect(page.getByTestId(`start-local-${n}`)).toBeVisible();
-    // Supabase の設定がないため、オンライン対戦の入口を出さない（decisions.md D-08）。
-    await expect(page.getByText('部屋を作る')).toHaveCount(0);
+    // Firebase の設定がないため、オンライン対戦の入口を出さない（decisions.md D-08 の考え方）。
+    await expect(page.getByTestId('online-entry')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
     await page.screenshot({ path: screenshotPath(`top-${width}`), fullPage: true });
     expect(errors).toEqual([]);
